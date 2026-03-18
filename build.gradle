@@ -1,0 +1,145 @@
+plugins {
+    id 'java'
+    id 'idea'
+    id 'application'
+    id 'jacoco'
+}
+
+group = 'org.example'
+version = '1.0-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.mapstruct:mapstruct:1.6.3'
+
+    compileOnly 'org.projectlombok:lombok:1.18.42'
+    annotationProcessor 'org.projectlombok:lombok:1.18.42'
+    annotationProcessor 'org.mapstruct:mapstruct-processor:1.6.3'
+
+    testCompileOnly 'org.projectlombok:lombok:1.18.42'
+    testAnnotationProcessor 'org.projectlombok:lombok:1.18.42'
+
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+
+    testImplementation 'org.testcontainers:junit-jupiter:1.19.7'
+    testImplementation 'org.testcontainers:postgresql:1.19.7'
+    testImplementation 'org.postgresql:postgresql:42.7.4'
+    testRuntimeOnly 'org.slf4j:slf4j-simple:2.0.13'
+}
+
+configurations {
+    integrationTestImplementation.extendsFrom testImplementation
+    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+}
+
+sourceSets {
+    integrationTest {
+        java.srcDir file('src/integrationTest/java')
+        resources.srcDir file('src/integrationTest/resources')
+        compileClasspath += sourceSets.main.output + configurations.testRuntimeClasspath
+        runtimeClasspath += output + compileClasspath
+    }
+}
+
+idea {
+    module {
+        testSources.from sourceSets.integrationTest.java.srcDirs
+        testResources.from sourceSets.integrationTest.resources.srcDirs
+    }
+}
+
+tasks.register('integrationTest', Test) {
+    description = 'Runs integration tests.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+    useJUnitPlatform()
+    shouldRunAfter test
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+    }
+}
+
+tasks.named('processIntegrationTestResources') {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+test {
+    useJUnitPlatform()
+    finalizedBy jacocoTestReport
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+    }
+}
+
+application {
+    mainClass = 'org.example.App'
+}
+
+jacoco {
+    toolVersion = '0.8.12'
+}
+
+jacocoTestReport {
+    dependsOn test
+
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: [
+                    'org/example/App.class',
+                    'org/example/dto/**',
+                    'org/example/presentation/**',
+                    'org/example/mappers/**',
+                    'org/example/repository/**',
+                    'org/example/domain/enums/**',
+                    'org/example/domain/exceptions/**'
+            ])
+        }))
+    }
+
+    reports {
+        xml.required = true
+        html.required = true
+        csv.required = false
+    }
+}
+
+jacocoTestCoverageVerification {
+    dependsOn test
+
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: [
+                    'org/example/App.class',
+                    'org/example/dto/**',
+                    'org/example/presentation/**',
+                    'org/example/mappers/**',
+                    'org/example/repository/**',
+                    'org/example/domain/enums/**',
+                    'org/example/domain/exceptions/**'
+            ])
+        }))
+    }
+
+    violationRules {
+        rule {
+            limit {
+                minimum = 0.70
+            }
+        }
+    }
+}
