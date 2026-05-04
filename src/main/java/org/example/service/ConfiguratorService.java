@@ -1,5 +1,6 @@
 package org.example.service;
 
+import lombok.RequiredArgsConstructor;
 import org.example.domain.enums.ComponentType;
 import org.example.domain.exceptions.DomainValidationException;
 import org.example.domain.exceptions.EntityNotFoundException;
@@ -13,66 +14,44 @@ import org.example.mappers.CarConfigurationMapper;
 import org.example.repository.CarConfigurationRepository;
 import org.example.repository.CarModelRepository;
 import org.example.repository.ComponentOptionRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.EnumMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class ConfiguratorService {
 
     private final CarModelRepository carModelRepository;
     private final ComponentOptionRepository componentOptionRepository;
     private final CarConfigurationRepository carConfigurationRepository;
-    private final CarConfigurationMapper carConfigurationMapper;
 
-    public ConfiguratorService(
-            CarModelRepository carModelRepository,
-            ComponentOptionRepository componentOptionRepository,
-            CarConfigurationRepository carConfigurationRepository
-    ) {
-        this.carModelRepository = carModelRepository;
-        this.componentOptionRepository = componentOptionRepository;
-        this.carConfigurationRepository = carConfigurationRepository;
-        this.carConfigurationMapper = CarConfigurationMapper.INSTANCE;
-    }
+    private final CarConfigurationMapper carConfigurationMapper = CarConfigurationMapper.INSTANCE;
 
+    @Transactional
     public CarConfigurationResponse buildConfiguration(BuildCarConfigurationRequest request) {
-        validateBuildRequest(request);
+        validateRequest(request);
 
         CarModel carModel = carModelRepository.findById(request.carModelId())
+                .filter(model -> !model.isRemoved())
                 .orElseThrow(() -> new EntityNotFoundException("CarModel", request.carModelId()));
-
-        Map<ComponentType, UUID> selectedComponentOptionIds = Optional.ofNullable(request.selectedComponentOptionIds())
-                .filter(map -> !map.isEmpty())
-                .orElseThrow(() -> new DomainValidationException("Selected component option ids must not be null or empty"));
-
-        validateRequiredComponents(carModel, selectedComponentOptionIds);
 
         Map<ComponentType, ComponentOption> selectedComponents = new EnumMap<>(ComponentType.class);
 
-        selectedComponentOptionIds.forEach((componentType, componentOptionId) -> {
-            ComponentType validatedComponentType = Optional.ofNullable(componentType)
-                    .orElseThrow(() -> new DomainValidationException("Component type must not be null"));
-
-            UUID validatedComponentOptionId = Optional.ofNullable(componentOptionId)
-                    .orElseThrow(() -> new DomainValidationException("Component option id must not be null"));
+        request.selectedComponentOptionIds().forEach((componentType, componentOptionId) -> {
+            ComponentType validatedComponentType = validateComponentType(componentType);
+            UUID validatedComponentOptionId = validateComponentOptionId(componentOptionId);
 
             ComponentOption componentOption = componentOptionRepository.findById(validatedComponentOptionId)
+                    .filter(option -> !option.isRemoved())
                     .orElseThrow(() -> new EntityNotFoundException("ComponentOption", validatedComponentOptionId));
 
-            if (componentOption.componentType() != validatedComponentType) {
-                throw new DomainValidationException(
-                        "Component option type does not match selected component type " + validatedComponentType
-                );
-            }
-
-            if (!componentOption.isCompatibleWith(carModel)) {
-                throw new IncompatibleComponentException(
-                        "Selected component '%s' is incompatible with car model '%s'"
-                                .formatted(componentOption.name(), carModel.getDisplayName())
-                );
-            }
+            validateComponentTypeMatch(componentOption, validatedComponentType);
+            validateComponentCompatibility(componentOption, carModel);
 
             selectedComponents.put(validatedComponentType, componentOption);
         });
@@ -86,29 +65,63 @@ public class ConfiguratorService {
         return carConfigurationMapper.toResponse(carConfigurationRepository.save(configuration));
     }
 
-    public CarConfigurationResponse getConfigurationById(UUID id) {
-        return carConfigurationRepository.findById(id)
+    public CarConfigurationResponse getConfigurationById(UUID configurationId) {
+        return carConfigurationRepository.findById(configurationId)
+                .filter(configuration -> !configuration.isRemoved())
                 .map(carConfigurationMapper::toResponse)
-                .orElseThrow(() -> new EntityNotFoundException("CarConfiguration", id));
+                .orElseThrow(() -> new EntityNotFoundException("CarConfiguration", configurationId));
     }
 
-    private void validateBuildRequest(BuildCarConfigurationRequest request) {
+    private void validateRequest(BuildCarConfigurationRequest request) {
         if (request == null) {
             throw new DomainValidationException("Build car configuration request must not be null");
         }
+
+        if (request.carModelId() == null) {
+            throw new DomainValidationException("Car model id must not be null");
+        }
+
+        if (request.selectedComponentOptionIds() == null || request.selectedComponentOptionIds().isEmpty()) {
+            throw new DomainValidationException("Selected component option ids must not be null or empty");
+        }
     }
 
-    private void validateRequiredComponents(
-            CarModel carModel,
-            Map<ComponentType, UUID> selectedComponentOptionIds
+    private ComponentType validateComponentType(ComponentType componentType) {
+        if (componentType == null) {
+            throw new DomainValidationException("Component type must not be null");
+        }
+
+        return componentType;
+    }
+
+    private UUID validateComponentOptionId(UUID componentOptionId) {
+        if (componentOptionId == null) {
+            throw new DomainValidationException("Component option id must not be null");
+        }
+
+        return componentOptionId;
+    }
+
+    private void validateComponentTypeMatch(
+            ComponentOption componentOption,
+            ComponentType selectedComponentType
     ) {
-        carModel.getRequiredComponentTypes().forEach(requiredComponentType -> {
-            if (!selectedComponentOptionIds.containsKey(requiredComponentType)
-                    || selectedComponentOptionIds.get(requiredComponentType) == null) {
-                throw new DomainValidationException(
-                        "Required component '%s' is missing".formatted(requiredComponentType)
-                );
-            }
-        });
+        if (componentOption.getType() != selectedComponentType) {
+            throw new DomainValidationException(
+                    "Selected component option type does not match requested component type"
+            );
+        }
+    }
+
+    private void validateComponentCompatibility(
+            ComponentOption componentOption,
+            CarModel carModel
+    ) {
+        if (!componentOption.isCompatibleWith(carModel)) {
+            throw new IncompatibleComponentException(
+                    "Component '%s' is incompatible with car model '%s'"
+                            .formatted(componentOption.getName(), carModel.getDisplayName())
+            );
+        }
     }
 }

@@ -1,54 +1,81 @@
 package org.example.presentation;
 
+import lombok.RequiredArgsConstructor;
+import org.example.domain.enums.TestDriveStatus;
 import org.example.dto.request.CreateTestDriveRequest;
 import org.example.dto.response.CarResponse;
 import org.example.dto.response.TestDriveRequestResponse;
 import org.example.service.TestDriveService;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
 
+@RestController
+@RequestMapping("/api/test-drives")
+@RequiredArgsConstructor
 public class TestDriveController {
 
     private final TestDriveService testDriveService;
 
-    public TestDriveController(TestDriveService testDriveService) {
-        this.testDriveService = testDriveService;
-    }
-
-    public TestDriveRequestResponse createTestDriveRequest(CreateTestDriveRequest request) {
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public TestDriveRequestResponse createTestDriveRequest(
+            @RequestBody CreateTestDriveRequest request
+    ) {
         return testDriveService.createTestDriveRequest(request);
     }
 
-    public TestDriveRequestResponse getTestDriveRequestById(UUID id) {
+    @GetMapping("/{id}")
+    public TestDriveRequestResponse getTestDriveRequestById(@PathVariable UUID id) {
         return testDriveService.getTestDriveRequestById(id);
     }
 
-    public List<TestDriveRequestResponse> getAllTestDriveRequests() {
-        return testDriveService.getAllTestDriveRequests();
+    @GetMapping
+    public List<TestDriveRequestResponse> getAllTestDriveRequests(
+            @RequestParam(required = false) TestDriveStatus status
+    ) {
+        if (status == null) {
+            return testDriveService.getAllTestDriveRequests();
+        }
+
+        return testDriveService.getTestDriveRequestsByStatus(status);
     }
 
+    @GetMapping("/cars")
     public List<CarResponse> getCarsAvailableForTestDrive() {
         return testDriveService.getCarsAvailableForTestDrive();
     }
 
-    public CarResponse addCarToTestDriveList(UUID carId) {
+    @PatchMapping("/cars/{carId}/add")
+    public CarResponse addCarToTestDriveList(@PathVariable UUID carId) {
         return testDriveService.addCarToTestDriveList(carId);
     }
 
-    public CarResponse removeCarFromTestDriveList(UUID carId) {
+    @PatchMapping("/cars/{carId}/remove")
+    public CarResponse removeCarFromTestDriveList(@PathVariable UUID carId) {
         return testDriveService.removeCarFromTestDriveList(carId);
     }
 
-    public TestDriveRequestResponse approveTestDriveRequest(UUID requestId) {
-        return testDriveService.approveTestDriveRequest(requestId);
+    @PatchMapping("/{id}/approve")
+    public TestDriveRequestResponse approveTestDriveRequest(@PathVariable UUID id) {
+        return testDriveService.approveTestDriveRequest(id);
     }
 
-    public TestDriveRequestResponse completeTestDriveRequest(UUID requestId) {
-        return testDriveService.completeTestDriveRequest(requestId);
+    @PatchMapping("/{id}/complete")
+    public TestDriveRequestResponse completeTestDriveRequest(@PathVariable UUID id) {
+        return testDriveService.completeTestDriveRequest(id);
     }
 
-    public TestDriveRequestResponse cancelTestDriveRequest(UUID requestId) {
-        return testDriveService.cancelTestDriveRequest(requestId);
+    @PatchMapping("/{id}/cancel")
+    public TestDriveRequestResponse cancelTestDriveRequest(@PathVariable UUID id) {
+        return testDriveService.cancelTestDriveRequest(id);
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteTestDriveRequest(@PathVariable UUID id) {
+        testDriveService.deleteTestDriveRequest(id);
     }
 }

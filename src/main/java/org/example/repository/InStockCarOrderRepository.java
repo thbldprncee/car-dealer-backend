@@ -1,20 +1,19 @@
 package org.example.repository;
 
+import org.example.domain.enums.InStockOrderStatus;
 import org.example.domain.model.InStockCarOrder;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
-public interface InStockCarOrderRepository {
+public interface InStockCarOrderRepository extends JpaRepository<InStockCarOrder, UUID> {
 
-    InStockCarOrder save(InStockCarOrder order);
+    List<InStockCarOrder> findAllByRemovedFalse();
 
-    Optional<InStockCarOrder> findById(UUID id);
+    List<InStockCarOrder> findAllByStatusAndRemovedFalse(InStockOrderStatus status);
 
-    List<InStockCarOrder> findAll();
+    List<InStockCarOrder> findAllByClientIdAndRemovedFalse(UUID clientId);
 
-    void deleteById(UUID id);
-
-    boolean existsById(UUID id);
+    List<InStockCarOrder> findAllBySalesManagerIdAndRemovedFalse(UUID salesManagerId);
 }

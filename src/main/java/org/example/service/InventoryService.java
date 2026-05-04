@@ -1,5 +1,6 @@
 package org.example.service;
 
+import lombok.RequiredArgsConstructor;
 import org.example.domain.enums.ComponentType;
 import org.example.domain.exceptions.DomainValidationException;
 import org.example.domain.exceptions.EntityNotFoundException;
@@ -7,6 +8,7 @@ import org.example.domain.model.Car;
 import org.example.domain.model.CarModel;
 import org.example.domain.model.ComponentOption;
 import org.example.domain.model.SparePart;
+import org.example.dto.request.CarModelFilterRequest;
 import org.example.dto.request.CreateCarModelRequest;
 import org.example.dto.request.CreateCarRequest;
 import org.example.dto.request.CreateComponentOptionRequest;
@@ -25,6 +27,10 @@ import org.example.repository.CarModelRepository;
 import org.example.repository.CarRepository;
 import org.example.repository.ComponentOptionRepository;
 import org.example.repository.SparePartRepository;
+import org.example.repository.specification.CarModelSpecification;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.EnumMap;
 import java.util.List;
@@ -32,6 +38,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class InventoryService {
 
     private final CarRepository carRepository;
@@ -39,35 +48,31 @@ public class InventoryService {
     private final SparePartRepository sparePartRepository;
     private final ComponentOptionRepository componentOptionRepository;
 
-    private final CarMapper carMapper;
-    private final CarModelMapper carModelMapper;
-    private final SparePartMapper sparePartMapper;
-    private final ComponentOptionMapper componentOptionMapper;
+    private final CarMapper carMapper = CarMapper.INSTANCE;
+    private final CarModelMapper carModelMapper = CarModelMapper.INSTANCE;
+    private final SparePartMapper sparePartMapper = SparePartMapper.INSTANCE;
+    private final ComponentOptionMapper componentOptionMapper = ComponentOptionMapper.INSTANCE;
 
-    public InventoryService(
-            CarRepository carRepository,
-            CarModelRepository carModelRepository,
-            SparePartRepository sparePartRepository,
-            ComponentOptionRepository componentOptionRepository
-    ) {
-        this.carRepository = carRepository;
-        this.carModelRepository = carModelRepository;
-        this.sparePartRepository = sparePartRepository;
-        this.componentOptionRepository = componentOptionRepository;
-        this.carMapper = CarMapper.INSTANCE;
-        this.carModelMapper = CarModelMapper.INSTANCE;
-        this.sparePartMapper = SparePartMapper.INSTANCE;
-        this.componentOptionMapper = ComponentOptionMapper.INSTANCE;
-    }
-
+    @Transactional
     public CarModelResponse createCarModel(CreateCarModelRequest request) {
         validateCreateCarModelRequest(request);
+
+        carModelRepository.findByBrandIgnoreCaseAndModelNameIgnoreCaseAndRemovedFalse(
+                request.brand(),
+                request.modelName()
+        ).ifPresent(existingModel -> {
+            throw new DomainValidationException(
+                    "Car model %s %s already exists".formatted(request.brand(), request.modelName())
+            );
+        });
 
         Map<ComponentType, ComponentOption> baseComponents = new EnumMap<>(ComponentType.class);
 
         request.baseComponentIds().forEach((componentType, componentId) -> {
             ComponentOption componentOption = componentOptionRepository.findById(componentId)
+                    .filter(option -> !option.isRemoved())
                     .orElseThrow(() -> new EntityNotFoundException("ComponentOption", componentId));
+
             baseComponents.put(componentType, componentOption);
         });
 
@@ -89,8 +94,16 @@ public class InventoryService {
         return carModelMapper.toResponse(carModelRepository.save(carModel));
     }
 
+    @Transactional
     public ComponentOptionResponse createComponentOption(CreateComponentOptionRequest request) {
         validateCreateComponentOptionRequest(request);
+
+        componentOptionRepository.findByNameIgnoreCaseAndRemovedFalse(request.name())
+                .ifPresent(existingComponent -> {
+                    throw new DomainValidationException(
+                            "Component option with name=%s already exists".formatted(request.name())
+                    );
+                });
 
         ComponentOption componentOption = new ComponentOption(
                 UUID.randomUUID(),
@@ -103,10 +116,11 @@ public class InventoryService {
         return componentOptionMapper.toResponse(componentOptionRepository.save(componentOption));
     }
 
+    @Transactional
     public CarResponse createCar(CreateCarRequest request) {
         validateCreateCarRequest(request);
 
-        carRepository.findByVin(request.vin())
+        carRepository.findByVinAndRemovedFalse(request.vin())
                 .ifPresent(existingCar -> {
                     throw new DomainValidationException(
                             "Car with vin=%s already exists".formatted(request.vin())
@@ -114,6 +128,7 @@ public class InventoryService {
                 });
 
         CarModel carModel = carModelRepository.findById(request.carModelId())
+                .filter(model -> !model.isRemoved())
                 .orElseThrow(() -> new EntityNotFoundException("CarModel", request.carModelId()));
 
         Car car = new Car(
@@ -129,8 +144,16 @@ public class InventoryService {
         return carMapper.toResponse(carRepository.save(car));
     }
 
+    @Transactional
     public SparePartResponse createSparePart(CreateSparePartRequest request) {
         validateCreateSparePartRequest(request);
+
+        sparePartRepository.findByNameIgnoreCaseAndRemovedFalse(request.name())
+                .ifPresent(existingSparePart -> {
+                    throw new DomainValidationException(
+                            "Spare part with name=%s already exists".formatted(request.name())
+                    );
+                });
 
         SparePart sparePart = new SparePart(
                 UUID.randomUUID(),
@@ -145,58 +168,74 @@ public class InventoryService {
 
     public CarResponse getCarById(UUID carId) {
         return carRepository.findById(carId)
+                .filter(car -> !car.isRemoved())
                 .map(carMapper::toResponse)
                 .orElseThrow(() -> new EntityNotFoundException("Car", carId));
     }
 
     public SparePartResponse getSparePartById(UUID sparePartId) {
         return sparePartRepository.findById(sparePartId)
+                .filter(sparePart -> !sparePart.isRemoved())
                 .map(sparePartMapper::toResponse)
                 .orElseThrow(() -> new EntityNotFoundException("SparePart", sparePartId));
     }
 
     public CarModelResponse getCarModelById(UUID carModelId) {
         return carModelRepository.findById(carModelId)
+                .filter(carModel -> !carModel.isRemoved())
                 .map(carModelMapper::toResponse)
                 .orElseThrow(() -> new EntityNotFoundException("CarModel", carModelId));
     }
 
     public ComponentOptionResponse getComponentOptionById(UUID componentOptionId) {
         return componentOptionRepository.findById(componentOptionId)
+                .filter(componentOption -> !componentOption.isRemoved())
                 .map(componentOptionMapper::toResponse)
                 .orElseThrow(() -> new EntityNotFoundException("ComponentOption", componentOptionId));
     }
 
     public List<CarResponse> getAllCars() {
-        return carRepository.findAll().stream()
+        return carRepository.findAllByRemovedFalse().stream()
                 .map(carMapper::toResponse)
                 .toList();
     }
 
     public List<SparePartResponse> getAllSpareParts() {
-        return sparePartRepository.findAll().stream()
+        return sparePartRepository.findAllByRemovedFalse().stream()
                 .map(sparePartMapper::toResponse)
                 .toList();
     }
 
     public List<CarModelResponse> getAllCarModels() {
-        return carModelRepository.findAll().stream()
+        return carModelRepository.findAllByRemovedFalse().stream()
                 .map(carModelMapper::toResponse)
                 .toList();
     }
 
     public List<ComponentOptionResponse> getAllComponentOptions() {
-        return componentOptionRepository.findAll().stream()
+        return componentOptionRepository.findAllByRemovedFalse().stream()
                 .map(componentOptionMapper::toResponse)
                 .toList();
     }
 
+    public List<CarModelResponse> filterBaseCarConfigurations(CarModelFilterRequest request) {
+        Specification<CarModel> specification = CarModelSpecification.notRemoved()
+                .and(CarModelSpecification.hasBrand(request == null ? null : request.brand()))
+                .and(CarModelSpecification.hasAllBaseComponents(
+                        request == null ? null : request.componentOptionIds()
+                ));
+
+        return carModelRepository.findAll(specification).stream()
+                .map(carModelMapper::toResponse)
+                .toList();
+    }
+
+    @Transactional
     public CarResponse updateCar(UUID carId, UpdateCarRequest request) {
-        if (request == null) {
-            throw new DomainValidationException("Update car request must not be null");
-        }
+        validateUpdateCarRequest(request);
 
         Car car = carRepository.findById(carId)
+                .filter(existingCar -> !existingCar.isRemoved())
                 .orElseThrow(() -> new EntityNotFoundException("Car", carId));
 
         Optional.ofNullable(request.color())
@@ -226,54 +265,77 @@ public class InventoryService {
         return carMapper.toResponse(carRepository.save(car));
     }
 
+    @Transactional
     public SparePartResponse updateSparePart(UUID sparePartId, UpdateSparePartRequest request) {
         validateUpdateSparePartRequest(request);
 
-        sparePartRepository.findById(sparePartId)
+        SparePart sparePart = sparePartRepository.findById(sparePartId)
+                .filter(existingSparePart -> !existingSparePart.isRemoved())
                 .orElseThrow(() -> new EntityNotFoundException("SparePart", sparePartId));
 
-        SparePart updatedSparePart = new SparePart(
-                sparePartId,
+        sparePart.update(
                 request.name(),
                 request.description(),
                 request.price(),
                 request.compatibleCarModelIds()
         );
 
-        return sparePartMapper.toResponse(sparePartRepository.save(updatedSparePart));
+        return sparePartMapper.toResponse(sparePartRepository.save(sparePart));
     }
 
+    @Transactional
     public void deleteCar(UUID carId) {
-        if (!carRepository.existsById(carId)) {
-            throw new EntityNotFoundException("Car", carId);
-        }
-        carRepository.deleteById(carId);
+        Car car = carRepository.findById(carId)
+                .filter(existingCar -> !existingCar.isRemoved())
+                .orElseThrow(() -> new EntityNotFoundException("Car", carId));
+
+        car.markAsRemoved();
+        carRepository.save(car);
     }
 
+    @Transactional
     public void deleteSparePart(UUID sparePartId) {
-        if (!sparePartRepository.existsById(sparePartId)) {
-            throw new EntityNotFoundException("SparePart", sparePartId);
-        }
-        sparePartRepository.deleteById(sparePartId);
+        SparePart sparePart = sparePartRepository.findById(sparePartId)
+                .filter(existingSparePart -> !existingSparePart.isRemoved())
+                .orElseThrow(() -> new EntityNotFoundException("SparePart", sparePartId));
+
+        sparePart.markAsRemoved();
+        sparePartRepository.save(sparePart);
     }
 
+    @Transactional
     public void deleteCarModel(UUID carModelId) {
-        if (!carModelRepository.existsById(carModelId)) {
-            throw new EntityNotFoundException("CarModel", carModelId);
-        }
-        carModelRepository.deleteById(carModelId);
+        CarModel carModel = carModelRepository.findById(carModelId)
+                .filter(existingCarModel -> !existingCarModel.isRemoved())
+                .orElseThrow(() -> new EntityNotFoundException("CarModel", carModelId));
+
+        carModel.markAsRemoved();
+        carModelRepository.save(carModel);
     }
 
+    @Transactional
     public void deleteComponentOption(UUID componentOptionId) {
-        if (!componentOptionRepository.existsById(componentOptionId)) {
-            throw new EntityNotFoundException("ComponentOption", componentOptionId);
-        }
-        componentOptionRepository.deleteById(componentOptionId);
+        ComponentOption componentOption = componentOptionRepository.findById(componentOptionId)
+                .filter(existingComponentOption -> !existingComponentOption.isRemoved())
+                .orElseThrow(() -> new EntityNotFoundException("ComponentOption", componentOptionId));
+
+        componentOption.markAsRemoved();
+        componentOptionRepository.save(componentOption);
     }
 
     private void validateCreateCarRequest(CreateCarRequest request) {
         if (request == null) {
             throw new DomainValidationException("Create car request must not be null");
+        }
+
+        if (request.carModelId() == null) {
+            throw new DomainValidationException("Car model id must not be null");
+        }
+    }
+
+    private void validateUpdateCarRequest(UpdateCarRequest request) {
+        if (request == null) {
+            throw new DomainValidationException("Update car request must not be null");
         }
     }
 
@@ -299,12 +361,15 @@ public class InventoryService {
         if (request == null) {
             throw new DomainValidationException("Create car model request must not be null");
         }
+
         if (request.id() == null) {
             throw new DomainValidationException("Car model id must not be null");
         }
+
         if (request.requiredComponentTypes() == null || request.requiredComponentTypes().isEmpty()) {
             throw new DomainValidationException("Required component types must not be null or empty");
         }
+
         if (request.baseComponentIds() == null || request.baseComponentIds().isEmpty()) {
             throw new DomainValidationException("Base component ids must not be null or empty");
         }

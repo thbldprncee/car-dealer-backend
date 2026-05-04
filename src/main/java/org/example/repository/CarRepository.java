@@ -1,26 +1,20 @@
 package org.example.repository;
 
 import org.example.domain.model.Car;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface CarRepository {
+public interface CarRepository extends JpaRepository<Car, UUID>, JpaSpecificationExecutor<Car> {
 
-    Car save(Car car);
+    List<Car> findAllByRemovedFalse();
 
-    Optional<Car> findById(UUID id);
+    List<Car> findAllByAvailableTrueAndRemovedFalse();
 
-    List<Car> findAll();
+    List<Car> findAllByAvailableForTestDriveTrueAndRemovedFalse();
 
-    void deleteById(UUID id);
-
-    boolean existsById(UUID id);
-
-    Optional<Car> findByVin(String vin);
-
-    List<Car> findAvailableCars();
-
-    List<Car> findCarsAvailableForTestDrive();
+    Optional<Car> findByVinAndRemovedFalse(String vin);
 }

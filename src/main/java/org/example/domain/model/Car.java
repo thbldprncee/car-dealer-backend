@@ -1,7 +1,16 @@
 package org.example.domain.model;
 
-import lombok.EqualsAndHashCode;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.ToString;
 import org.example.domain.enums.CarColor;
 import org.example.domain.exceptions.DomainValidationException;
@@ -11,18 +20,31 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Getter
+@Entity
+@Table(name = "cars")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @ToString
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
-public class Car {
+public class Car extends BaseEntity {
 
-    @EqualsAndHashCode.Include
-    private final UUID id;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "car_model_id", nullable = false)
+    @ToString.Exclude
+    private CarModel carModel;
 
-    private final CarModel carModel;
-    private final String vin;
+    @Column(name = "vin", nullable = false, unique = true)
+    private String vin;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "color", nullable = false)
     private CarColor color;
+
+    @Column(name = "price", nullable = false, precision = 19, scale = 2)
     private BigDecimal price;
+
+    @Column(name = "available", nullable = false)
     private boolean available;
+
+    @Column(name = "available_for_test_drive", nullable = false)
     private boolean availableForTestDrive;
 
     public Car(
@@ -41,7 +63,7 @@ public class Car {
         this.vin = validateRequiredText(vin, "VIN must not be blank");
         this.color = Optional.ofNullable(color)
                 .orElseThrow(() -> new DomainValidationException("Car color must not be null"));
-        this.price = validateNonNegative(price, "Car price must not be negative");
+        this.price = validateCarPrice(price);
         this.available = available;
         this.availableForTestDrive = availableForTestDrive;
     }
@@ -52,7 +74,7 @@ public class Car {
     }
 
     public void updatePrice(BigDecimal price) {
-        this.price = validateNonNegative(price, "Car price must not be negative");
+        this.price = validateCarPrice(price);
     }
 
     public void markAsUnavailable() {
@@ -64,6 +86,10 @@ public class Car {
     }
 
     public void enableTestDrive() {
+        if (!available) {
+            throw new DomainValidationException("Unavailable car cannot be added to test drive list");
+        }
+
         this.availableForTestDrive = true;
     }
 
@@ -82,12 +108,12 @@ public class Car {
                 .orElseThrow(() -> new DomainValidationException(message));
     }
 
-    private BigDecimal validateNonNegative(BigDecimal value, String message) {
+    private BigDecimal validateCarPrice(BigDecimal value) {
         BigDecimal validated = Optional.ofNullable(value)
-                .orElseThrow(() -> new DomainValidationException(message));
+                .orElseThrow(() -> new DomainValidationException("Car price must not be null"));
 
         if (validated.compareTo(BigDecimal.ZERO) < 0) {
-            throw new DomainValidationException(message);
+            throw new DomainValidationException("Car price must not be negative");
         }
 
         return validated;

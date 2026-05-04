@@ -1,24 +1,38 @@
 package org.example.domain.model;
 
-import lombok.EqualsAndHashCode;
+import jakarta.persistence.Column;
+import jakarta.persistence.DiscriminatorColumn;
+import jakarta.persistence.DiscriminatorType;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Inheritance;
+import jakarta.persistence.InheritanceType;
+import jakarta.persistence.Table;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.ToString;
 import org.example.domain.exceptions.DomainValidationException;
 
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
 @Getter
 @ToString
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
-public abstract class User {
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Entity
+@Table(name = "users")
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "role", discriminatorType = DiscriminatorType.STRING)
+public abstract class User extends BaseEntity {
 
-    @EqualsAndHashCode.Include
-    private final UUID id;
-    private final String firstName;
-    private final String lastName;
-    private final String email;
+    @Column(name = "first_name", nullable = false)
+    protected String firstName;
+
+    @Column(name = "last_name", nullable = false)
+    protected String lastName;
+
+    @Column(name = "email", nullable = false, unique = true)
+    protected String email;
 
     protected User(UUID id, String firstName, String lastName, String email) {
         this.id = Optional.ofNullable(id)

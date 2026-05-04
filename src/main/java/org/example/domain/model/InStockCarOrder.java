@@ -1,28 +1,47 @@
 package org.example.domain.model;
 
-import lombok.EqualsAndHashCode;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.ToString;
 import org.example.domain.enums.InStockOrderStatus;
 import org.example.domain.exceptions.DomainValidationException;
 
-import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
 @Getter
+@Entity
+@Table(name = "in_stock_car_orders")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @ToString
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
-public class InStockCarOrder {
+public class InStockCarOrder extends BaseEntity {
 
-    @EqualsAndHashCode.Include
-    private final UUID id;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "client_id", nullable = false)
+    @ToString.Exclude
+    private Client client;
 
-    private final Client client;
-    private final SalesManager salesManager;
-    private final Car car;
-    private final LocalDateTime createdAt;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "sales_manager_id", nullable = false)
+    @ToString.Exclude
+    private SalesManager salesManager;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "car_id", nullable = false)
+    @ToString.Exclude
+    private Car car;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
     private InStockOrderStatus status;
 
     public InStockCarOrder(
@@ -30,68 +49,77 @@ public class InStockCarOrder {
             Client client,
             SalesManager salesManager,
             Car car,
-            LocalDateTime createdAt,
             InStockOrderStatus status
     ) {
         this.id = Optional.ofNullable(id)
-                .orElseThrow(() -> new DomainValidationException("In-stock order id must not be null"));
+                .orElseThrow(() -> new DomainValidationException("In-stock car order id must not be null"));
         this.client = Optional.ofNullable(client)
                 .orElseThrow(() -> new DomainValidationException("Client must not be null"));
         this.salesManager = Optional.ofNullable(salesManager)
                 .orElseThrow(() -> new DomainValidationException("Sales manager must not be null"));
         this.car = Optional.ofNullable(car)
                 .orElseThrow(() -> new DomainValidationException("Car must not be null"));
-        this.createdAt = Optional.ofNullable(createdAt)
-                .orElseThrow(() -> new DomainValidationException("Created at must not be null"));
         this.status = Optional.ofNullable(status)
-                .orElseThrow(() -> new DomainValidationException("Order status must not be null"));
+                .orElseThrow(() -> new DomainValidationException("In-stock car order status must not be null"));
 
         validateCarAvailability();
     }
 
     public void approveByManager() {
-        ensureStatus(InStockOrderStatus.CREATED,
-                "Only an order in CREATED status can be approved by manager");
+        ensureStatus(
+                InStockOrderStatus.CREATED,
+                "Only a created in-stock order can be approved by manager"
+        );
         this.status = InStockOrderStatus.APPROVED_BY_MANAGER;
     }
 
     public void markWaitingForPayment() {
-        ensureStatus(InStockOrderStatus.APPROVED_BY_MANAGER,
-                "Only an order approved by manager can move to WAITING_FOR_PAYMENT");
+        ensureStatus(
+                InStockOrderStatus.APPROVED_BY_MANAGER,
+                "Only an approved in-stock order can be moved to waiting for payment"
+        );
         this.status = InStockOrderStatus.WAITING_FOR_PAYMENT;
     }
 
     public void markAsPaid() {
-        ensureStatus(InStockOrderStatus.WAITING_FOR_PAYMENT,
-                "Only an order in WAITING_FOR_PAYMENT status can be marked as PAID");
+        ensureStatus(
+                InStockOrderStatus.WAITING_FOR_PAYMENT,
+                "Only an in-stock order waiting for payment can be paid"
+        );
         this.status = InStockOrderStatus.PAID;
     }
 
     public void markReadyForDelivery() {
-        ensureStatus(InStockOrderStatus.PAID,
-                "Only a paid order can move to READY_FOR_DELIVERY");
+        ensureStatus(
+                InStockOrderStatus.PAID,
+                "Only a paid in-stock order can be marked as ready for delivery"
+        );
         this.status = InStockOrderStatus.READY_FOR_DELIVERY;
     }
 
     public void complete() {
-        ensureStatus(InStockOrderStatus.READY_FOR_DELIVERY,
-                "Only an order in READY_FOR_DELIVERY status can be completed");
+        ensureStatus(
+                InStockOrderStatus.READY_FOR_DELIVERY,
+                "Only an in-stock order ready for delivery can be completed"
+        );
         this.status = InStockOrderStatus.COMPLETED;
     }
 
     public void cancel() {
         if (status == InStockOrderStatus.COMPLETED) {
-            throw new DomainValidationException("A completed order cannot be canceled");
+            throw new DomainValidationException("Completed in-stock order cannot be canceled");
         }
+
         if (status == InStockOrderStatus.CANCELED) {
-            throw new DomainValidationException("Order is already canceled");
+            throw new DomainValidationException("In-stock order is already canceled");
         }
+
         this.status = InStockOrderStatus.CANCELED;
     }
 
     private void validateCarAvailability() {
         if (!car.isAvailable()) {
-            throw new DomainValidationException("Car is not available for purchase");
+            throw new DomainValidationException("Car is not available for order");
         }
     }
 

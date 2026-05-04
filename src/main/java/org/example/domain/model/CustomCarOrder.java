@@ -1,29 +1,54 @@
 package org.example.domain.model;
 
-import lombok.EqualsAndHashCode;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.ToString;
 import org.example.domain.enums.CustomOrderStatus;
 import org.example.domain.exceptions.DomainValidationException;
 
-import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
 @Getter
+@Entity
+@Table(name = "custom_car_orders")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @ToString
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
-public class CustomCarOrder {
+public class CustomCarOrder extends BaseEntity {
 
-    @EqualsAndHashCode.Include
-    private final UUID id;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "client_id", nullable = false)
+    @ToString.Exclude
+    private Client client;
 
-    private final Client client;
-    private final SalesManager salesManager;
-    private final CarModel carModel;
-    private final CarConfiguration configuration;
-    private final LocalDateTime createdAt;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "sales_manager_id", nullable = false)
+    @ToString.Exclude
+    private SalesManager salesManager;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "car_model_id", nullable = false)
+    @ToString.Exclude
+    private CarModel carModel;
+
+    @OneToOne(fetch = FetchType.LAZY, optional = false, cascade = CascadeType.ALL)
+    @JoinColumn(name = "car_configuration_id", nullable = false, unique = true)
+    @ToString.Exclude
+    private CarConfiguration configuration;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
     private CustomOrderStatus status;
 
     public CustomCarOrder(
@@ -32,11 +57,10 @@ public class CustomCarOrder {
             SalesManager salesManager,
             CarModel carModel,
             CarConfiguration configuration,
-            LocalDateTime createdAt,
             CustomOrderStatus status
     ) {
         this.id = Optional.ofNullable(id)
-                .orElseThrow(() -> new DomainValidationException("Custom order id must not be null"));
+                .orElseThrow(() -> new DomainValidationException("Custom car order id must not be null"));
         this.client = Optional.ofNullable(client)
                 .orElseThrow(() -> new DomainValidationException("Client must not be null"));
         this.salesManager = Optional.ofNullable(salesManager)
@@ -45,18 +69,16 @@ public class CustomCarOrder {
                 .orElseThrow(() -> new DomainValidationException("Car model must not be null"));
         this.configuration = Optional.ofNullable(configuration)
                 .orElseThrow(() -> new DomainValidationException("Car configuration must not be null"));
-        this.createdAt = Optional.ofNullable(createdAt)
-                .orElseThrow(() -> new DomainValidationException("Created at must not be null"));
         this.status = Optional.ofNullable(status)
-                .orElseThrow(() -> new DomainValidationException("Custom order status must not be null"));
+                .orElseThrow(() -> new DomainValidationException("Custom car order status must not be null"));
 
-        validateConfigurationMatchesModel();
+        validateConfigurationBelongsToCarModel();
     }
 
     public void approveByWarehouse() {
         ensureStatus(
                 CustomOrderStatus.CREATED,
-                "Only an order in CREATED status can be approved by warehouse"
+                "Only a created custom car order can be approved by warehouse"
         );
         this.status = CustomOrderStatus.APPROVED_BY_WAREHOUSE;
     }
@@ -64,7 +86,7 @@ public class CustomCarOrder {
     public void markWaitingForPayment() {
         ensureStatus(
                 CustomOrderStatus.APPROVED_BY_WAREHOUSE,
-                "Only an order approved by warehouse can move to WAITING_FOR_PAYMENT"
+                "Only an approved custom car order can be moved to waiting for payment"
         );
         this.status = CustomOrderStatus.WAITING_FOR_PAYMENT;
     }
@@ -72,7 +94,7 @@ public class CustomCarOrder {
     public void markAsPaid() {
         ensureStatus(
                 CustomOrderStatus.WAITING_FOR_PAYMENT,
-                "Only an order in WAITING_FOR_PAYMENT status can be marked as PAID"
+                "Only a custom car order waiting for payment can be paid"
         );
         this.status = CustomOrderStatus.PAID;
     }
@@ -80,7 +102,7 @@ public class CustomCarOrder {
     public void markWaitingForDelivery() {
         ensureStatus(
                 CustomOrderStatus.PAID,
-                "Only a paid order can move to WAITING_FOR_DELIVERY"
+                "Only a paid custom car order can be moved to waiting for delivery"
         );
         this.status = CustomOrderStatus.WAITING_FOR_DELIVERY;
     }
@@ -88,7 +110,7 @@ public class CustomCarOrder {
     public void markReadyForDelivery() {
         ensureStatus(
                 CustomOrderStatus.WAITING_FOR_DELIVERY,
-                "Only an order in WAITING_FOR_DELIVERY status can move to READY_FOR_DELIVERY"
+                "Only a custom car order waiting for delivery can be marked as ready for delivery"
         );
         this.status = CustomOrderStatus.READY_FOR_DELIVERY;
     }
@@ -96,24 +118,26 @@ public class CustomCarOrder {
     public void complete() {
         ensureStatus(
                 CustomOrderStatus.READY_FOR_DELIVERY,
-                "Only an order in READY_FOR_DELIVERY status can be completed"
+                "Only a custom car order ready for delivery can be completed"
         );
         this.status = CustomOrderStatus.COMPLETED;
     }
 
     public void cancel() {
         if (status == CustomOrderStatus.COMPLETED) {
-            throw new DomainValidationException("A completed custom order cannot be canceled");
+            throw new DomainValidationException("Completed custom car order cannot be canceled");
         }
+
         if (status == CustomOrderStatus.CANCELED) {
-            throw new DomainValidationException("Custom order is already canceled");
+            throw new DomainValidationException("Custom car order is already canceled");
         }
+
         this.status = CustomOrderStatus.CANCELED;
     }
 
-    private void validateConfigurationMatchesModel() {
-        if (!configuration.getCarModel().equals(carModel)) {
-            throw new DomainValidationException("Configuration car model must match custom order car model");
+    private void validateConfigurationBelongsToCarModel() {
+        if (!configuration.getCarModel().getId().equals(carModel.getId())) {
+            throw new DomainValidationException("Configuration car model does not match order car model");
         }
     }
 

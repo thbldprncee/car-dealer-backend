@@ -1,5 +1,6 @@
 package org.example.service;
 
+import lombok.RequiredArgsConstructor;
 import org.example.domain.exceptions.DomainValidationException;
 import org.example.domain.exceptions.EntityNotFoundException;
 import org.example.domain.model.Car;
@@ -11,27 +12,28 @@ import org.example.dto.response.CarResponse;
 import org.example.mappers.CarMapper;
 import org.example.repository.CarModelRepository;
 import org.example.repository.CarRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class CarService {
 
     private final CarRepository carRepository;
     private final CarModelRepository carModelRepository;
-    private final CarMapper carMapper;
 
-    public CarService(CarRepository carRepository, CarModelRepository carModelRepository) {
-        this.carRepository = carRepository;
-        this.carModelRepository = carModelRepository;
-        this.carMapper = CarMapper.INSTANCE;
-    }
+    private final CarMapper carMapper = CarMapper.INSTANCE;
 
+    @Transactional
     public CarResponse createCar(CreateCarRequest request) {
         validateCreateRequest(request);
 
-        carRepository.findByVin(request.vin())
+        carRepository.findByVinAndRemovedFalse(request.vin())
                 .ifPresent(existingCar -> {
                     throw new DomainValidationException(
                             "Car with vin=%s already exists".formatted(request.vin())
@@ -39,6 +41,7 @@ public class CarService {
                 });
 
         CarModel carModel = carModelRepository.findById(request.carModelId())
+                .filter(carModelEntity -> !carModelEntity.isRemoved())
                 .orElseThrow(() -> new EntityNotFoundException("CarModel", request.carModelId()));
 
         Car car = new Car(
@@ -56,30 +59,31 @@ public class CarService {
 
     public CarResponse getCarById(UUID id) {
         return carRepository.findById(id)
+                .filter(car -> !car.isRemoved())
                 .map(carMapper::toResponse)
                 .orElseThrow(() -> new EntityNotFoundException("Car", id));
     }
 
     public List<CarResponse> getAllCars() {
-        return carRepository.findAll().stream()
+        return carRepository.findAllByRemovedFalse().stream()
                 .map(carMapper::toResponse)
                 .toList();
     }
 
     public List<CarResponse> getAvailableCars() {
-        return carRepository.findAvailableCars().stream()
+        return carRepository.findAllByAvailableTrueAndRemovedFalse().stream()
                 .map(carMapper::toResponse)
                 .toList();
     }
 
     public List<CarResponse> getCarsAvailableForTestDrive() {
-        return carRepository.findCarsAvailableForTestDrive().stream()
+        return carRepository.findAllByAvailableForTestDriveTrueAndRemovedFalse().stream()
                 .map(carMapper::toResponse)
                 .toList();
     }
 
     public List<CarResponse> filterCars(CarFilterRequest filter) {
-        return carRepository.findAvailableCars().stream()
+        return carRepository.findAllByAvailableTrueAndRemovedFalse().stream()
                 .filter(car -> matchesMinPrice(car, filter))
                 .filter(car -> matchesMaxPrice(car, filter))
                 .filter(car -> matchesBrand(car, filter))
@@ -97,10 +101,12 @@ public class CarService {
                 .toList();
     }
 
+    @Transactional
     public CarResponse updateCar(UUID id, UpdateCarRequest request) {
         validateUpdateRequest(request);
 
         Car car = carRepository.findById(id)
+                .filter(carEntity -> !carEntity.isRemoved())
                 .orElseThrow(() -> new EntityNotFoundException("Car", id));
 
         Optional.ofNullable(request.color())
@@ -130,16 +136,23 @@ public class CarService {
         return carMapper.toResponse(carRepository.save(car));
     }
 
+    @Transactional
     public void deleteCar(UUID id) {
-        if (!carRepository.existsById(id)) {
-            throw new EntityNotFoundException("Car", id);
-        }
-        carRepository.deleteById(id);
+        Car car = carRepository.findById(id)
+                .filter(carEntity -> !carEntity.isRemoved())
+                .orElseThrow(() -> new EntityNotFoundException("Car", id));
+
+        car.markAsRemoved();
+        carRepository.save(car);
     }
 
     private void validateCreateRequest(CreateCarRequest request) {
         if (request == null) {
             throw new DomainValidationException("Create car request must not be null");
+        }
+
+        if (request.carModelId() == null) {
+            throw new DomainValidationException("Car model id must not be null");
         }
     }
 

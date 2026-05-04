@@ -1,1 +1,15 @@
-# Тут можно расположить запуск сервисов (постгрес, кейклок)
+services:
+  postgres:
+    image: postgres:16
+    container_name: car-dealer-postgres
+    environment:
+      POSTGRES_DB: car_dealer
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - car_dealer_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  car_dealer_postgres_data:

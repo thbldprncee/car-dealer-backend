@@ -1,20 +1,19 @@
 package org.example.repository;
 
+import org.example.domain.enums.CustomOrderStatus;
 import org.example.domain.model.CustomCarOrder;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
-public interface CustomCarOrderRepository {
+public interface CustomCarOrderRepository extends JpaRepository<CustomCarOrder, UUID> {
 
-    CustomCarOrder save(CustomCarOrder order);
+    List<CustomCarOrder> findAllByRemovedFalse();
 
-    Optional<CustomCarOrder> findById(UUID id);
+    List<CustomCarOrder> findAllByStatusAndRemovedFalse(CustomOrderStatus status);
 
-    List<CustomCarOrder> findAll();
+    List<CustomCarOrder> findAllByClientIdAndRemovedFalse(UUID clientId);
 
-    void deleteById(UUID id);
-
-    boolean existsById(UUID id);
+    List<CustomCarOrder> findAllBySalesManagerIdAndRemovedFalse(UUID salesManagerId);
 }

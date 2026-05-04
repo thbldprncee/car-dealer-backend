@@ -1,20 +1,19 @@
 package org.example.repository;
 
+import org.example.domain.enums.TestDriveStatus;
 import org.example.domain.model.TestDriveRequest;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
-public interface TestDriveRequestRepository {
+public interface TestDriveRequestRepository extends JpaRepository<TestDriveRequest, UUID> {
 
-    TestDriveRequest save(TestDriveRequest request);
+    List<TestDriveRequest> findAllByRemovedFalse();
 
-    Optional<TestDriveRequest> findById(UUID id);
+    List<TestDriveRequest> findAllByStatusAndRemovedFalse(TestDriveStatus status);
 
-    List<TestDriveRequest> findAll();
+    List<TestDriveRequest> findAllByClientIdAndRemovedFalse(UUID clientId);
 
-    void deleteById(UUID id);
-
-    boolean existsById(UUID id);
+    List<TestDriveRequest> findAllByCarIdAndRemovedFalse(UUID carId);
 }

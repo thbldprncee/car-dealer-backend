@@ -1,95 +1,136 @@
 package org.example.presentation;
 
+import lombok.RequiredArgsConstructor;
+import org.example.domain.enums.CustomOrderStatus;
+import org.example.domain.enums.InStockOrderStatus;
 import org.example.dto.request.CreateCustomCarOrderRequest;
 import org.example.dto.request.CreateInStockCarOrderRequest;
 import org.example.dto.response.CustomCarOrderResponse;
 import org.example.dto.response.InStockCarOrderResponse;
 import org.example.service.OrderService;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
 
+@RestController
+@RequestMapping("/api/orders")
+@RequiredArgsConstructor
 public class OrderController {
 
     private final OrderService orderService;
 
-    public OrderController(OrderService orderService) {
-        this.orderService = orderService;
-    }
-
-    public InStockCarOrderResponse createInStockOrder(CreateInStockCarOrderRequest request) {
+    @PostMapping("/in-stock")
+    @ResponseStatus(HttpStatus.CREATED)
+    public InStockCarOrderResponse createInStockOrder(
+            @RequestBody CreateInStockCarOrderRequest request
+    ) {
         return orderService.createInStockOrder(request);
     }
 
-    public CustomCarOrderResponse createCustomOrder(CreateCustomCarOrderRequest request) {
-        return orderService.createCustomOrder(request);
-    }
-
-    public InStockCarOrderResponse getInStockOrderById(UUID id) {
+    @GetMapping("/in-stock/{id}")
+    public InStockCarOrderResponse getInStockOrderById(@PathVariable UUID id) {
         return orderService.getInStockOrderById(id);
     }
 
-    public CustomCarOrderResponse getCustomOrderById(UUID id) {
+    @GetMapping("/in-stock")
+    public List<InStockCarOrderResponse> getAllInStockOrders(
+            @RequestParam(required = false) InStockOrderStatus status
+    ) {
+        if (status == null) {
+            return orderService.getAllInStockOrders();
+        }
+
+        return orderService.getInStockOrdersByStatus(status);
+    }
+
+    @PatchMapping("/in-stock/{id}/approve-by-manager")
+    public InStockCarOrderResponse approveInStockOrderByManager(@PathVariable UUID id) {
+        return orderService.approveInStockOrderByManager(id);
+    }
+
+    @PatchMapping("/in-stock/{id}/waiting-for-payment")
+    public InStockCarOrderResponse moveInStockOrderToWaitingForPayment(@PathVariable UUID id) {
+        return orderService.moveInStockOrderToWaitingForPayment(id);
+    }
+
+    @PatchMapping("/in-stock/{id}/pay")
+    public InStockCarOrderResponse payInStockOrder(@PathVariable UUID id) {
+        return orderService.payInStockOrder(id);
+    }
+
+    @PatchMapping("/in-stock/{id}/ready-for-delivery")
+    public InStockCarOrderResponse markInStockOrderReadyForDelivery(@PathVariable UUID id) {
+        return orderService.markInStockOrderReadyForDelivery(id);
+    }
+
+    @PatchMapping("/in-stock/{id}/complete")
+    public InStockCarOrderResponse completeInStockOrder(@PathVariable UUID id) {
+        return orderService.completeInStockOrder(id);
+    }
+
+    @PatchMapping("/in-stock/{id}/cancel")
+    public InStockCarOrderResponse cancelInStockOrder(@PathVariable UUID id) {
+        return orderService.cancelInStockOrder(id);
+    }
+
+    @PostMapping("/custom")
+    @ResponseStatus(HttpStatus.CREATED)
+    public CustomCarOrderResponse createCustomOrder(
+            @RequestBody CreateCustomCarOrderRequest request
+    ) {
+        return orderService.createCustomOrder(request);
+    }
+
+    @GetMapping("/custom/{id}")
+    public CustomCarOrderResponse getCustomOrderById(@PathVariable UUID id) {
         return orderService.getCustomOrderById(id);
     }
 
-    public List<InStockCarOrderResponse> getAllInStockOrders() {
-        return orderService.getAllInStockOrders();
+    @GetMapping("/custom")
+    public List<CustomCarOrderResponse> getAllCustomOrders(
+            @RequestParam(required = false) CustomOrderStatus status
+    ) {
+        if (status == null) {
+            return orderService.getAllCustomOrders();
+        }
+
+        return orderService.getCustomOrdersByStatus(status);
     }
 
-    public List<CustomCarOrderResponse> getAllCustomOrders() {
-        return orderService.getAllCustomOrders();
+    @PatchMapping("/custom/{id}/approve-by-warehouse")
+    public CustomCarOrderResponse approveCustomOrderByWarehouse(@PathVariable UUID id) {
+        return orderService.approveCustomOrderByWarehouse(id);
     }
 
-    public InStockCarOrderResponse approveInStockOrderByManager(UUID orderId) {
-        return orderService.approveInStockOrderByManager(orderId);
+    @PatchMapping("/custom/{id}/waiting-for-payment")
+    public CustomCarOrderResponse moveCustomOrderToWaitingForPayment(@PathVariable UUID id) {
+        return orderService.moveCustomOrderToWaitingForPayment(id);
     }
 
-    public InStockCarOrderResponse moveInStockOrderToWaitingForPayment(UUID orderId) {
-        return orderService.moveInStockOrderToWaitingForPayment(orderId);
+    @PatchMapping("/custom/{id}/pay")
+    public CustomCarOrderResponse payCustomOrder(@PathVariable UUID id) {
+        return orderService.payCustomOrder(id);
     }
 
-    public InStockCarOrderResponse payInStockOrder(UUID orderId) {
-        return orderService.payInStockOrder(orderId);
+    @PatchMapping("/custom/{id}/waiting-for-delivery")
+    public CustomCarOrderResponse moveCustomOrderToWaitingForDelivery(@PathVariable UUID id) {
+        return orderService.moveCustomOrderToWaitingForDelivery(id);
     }
 
-    public InStockCarOrderResponse markInStockOrderReadyForDelivery(UUID orderId) {
-        return orderService.markInStockOrderReadyForDelivery(orderId);
+    @PatchMapping("/custom/{id}/ready-for-delivery")
+    public CustomCarOrderResponse markCustomOrderReadyForDelivery(@PathVariable UUID id) {
+        return orderService.markCustomOrderReadyForDelivery(id);
     }
 
-    public InStockCarOrderResponse completeInStockOrder(UUID orderId) {
-        return orderService.completeInStockOrder(orderId);
+    @PatchMapping("/custom/{id}/complete")
+    public CustomCarOrderResponse completeCustomOrder(@PathVariable UUID id) {
+        return orderService.completeCustomOrder(id);
     }
 
-    public InStockCarOrderResponse cancelInStockOrder(UUID orderId) {
-        return orderService.cancelInStockOrder(orderId);
-    }
-
-    public CustomCarOrderResponse approveCustomOrderByWarehouse(UUID orderId) {
-        return orderService.approveCustomOrderByWarehouse(orderId);
-    }
-
-    public CustomCarOrderResponse moveCustomOrderToWaitingForPayment(UUID orderId) {
-        return orderService.moveCustomOrderToWaitingForPayment(orderId);
-    }
-
-    public CustomCarOrderResponse payCustomOrder(UUID orderId) {
-        return orderService.payCustomOrder(orderId);
-    }
-
-    public CustomCarOrderResponse moveCustomOrderToWaitingForDelivery(UUID orderId) {
-        return orderService.moveCustomOrderToWaitingForDelivery(orderId);
-    }
-
-    public CustomCarOrderResponse markCustomOrderReadyForDelivery(UUID orderId) {
-        return orderService.markCustomOrderReadyForDelivery(orderId);
-    }
-
-    public CustomCarOrderResponse completeCustomOrder(UUID orderId) {
-        return orderService.completeCustomOrder(orderId);
-    }
-
-    public CustomCarOrderResponse cancelCustomOrder(UUID orderId) {
-        return orderService.cancelCustomOrder(orderId);
+    @PatchMapping("/custom/{id}/cancel")
+    public CustomCarOrderResponse cancelCustomOrder(@PathVariable UUID id) {
+        return orderService.cancelCustomOrder(id);
     }
 }

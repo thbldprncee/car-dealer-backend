@@ -13,5 +13,6 @@ public interface CarConfigurationMapper {
 
     @Mapping(target = "carModelId", source = "carModel.id")
     @Mapping(target = "carModelDisplayName", expression = "java(configuration.getCarModel().getDisplayName())")
+    @Mapping(target = "totalPrice", expression = "java(configuration.calculateTotalPrice())")
     CarConfigurationResponse toResponse(CarConfiguration configuration);
 }

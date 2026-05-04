@@ -1,20 +1,21 @@
 package org.example.repository;
 
 import org.example.domain.model.CarModel;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface CarModelRepository {
+public interface CarModelRepository extends JpaRepository<CarModel, UUID>, JpaSpecificationExecutor<CarModel> {
 
-    CarModel save(CarModel carModel);
+    List<CarModel> findAllByRemovedFalse();
 
-    Optional<CarModel> findById(UUID id);
+    List<CarModel> findAllByBrandIgnoreCaseAndRemovedFalse(String brand);
 
-    List<CarModel> findAll();
-
-    void deleteById(UUID id);
-
-    boolean existsById(UUID id);
+    Optional<CarModel> findByBrandIgnoreCaseAndModelNameIgnoreCaseAndRemovedFalse(
+            String brand,
+            String modelName
+    );
 }

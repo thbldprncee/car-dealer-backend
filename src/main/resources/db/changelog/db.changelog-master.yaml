@@ -1,0 +1,6 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/changeset/001-create-tables.yaml
+
+  - include:
+      file: db/changelog/changeset/002-seed-data.yaml
