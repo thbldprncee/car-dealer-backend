@@ -9,6 +9,7 @@ import org.example.dto.response.CustomCarOrderResponse;
 import org.example.dto.response.InStockCarOrderResponse;
 import org.example.service.OrderService;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,6 +24,7 @@ public class OrderController {
 
     @PostMapping("/in-stock")
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public InStockCarOrderResponse createInStockOrder(
             @RequestBody CreateInStockCarOrderRequest request
     ) {
@@ -30,11 +32,13 @@ public class OrderController {
     }
 
     @GetMapping("/in-stock/{id}")
+    @PreAuthorize("hasAnyRole('USER', 'MANAGER', 'ADMIN')")
     public InStockCarOrderResponse getInStockOrderById(@PathVariable UUID id) {
         return orderService.getInStockOrderById(id);
     }
 
     @GetMapping("/in-stock")
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
     public List<InStockCarOrderResponse> getAllInStockOrders(
             @RequestParam(required = false) InStockOrderStatus status
     ) {
@@ -46,37 +50,44 @@ public class OrderController {
     }
 
     @PatchMapping("/in-stock/{id}/approve-by-manager")
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
     public InStockCarOrderResponse approveInStockOrderByManager(@PathVariable UUID id) {
         return orderService.approveInStockOrderByManager(id);
     }
 
     @PatchMapping("/in-stock/{id}/waiting-for-payment")
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
     public InStockCarOrderResponse moveInStockOrderToWaitingForPayment(@PathVariable UUID id) {
         return orderService.moveInStockOrderToWaitingForPayment(id);
     }
 
     @PatchMapping("/in-stock/{id}/pay")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public InStockCarOrderResponse payInStockOrder(@PathVariable UUID id) {
         return orderService.payInStockOrder(id);
     }
 
     @PatchMapping("/in-stock/{id}/ready-for-delivery")
+    @PreAuthorize("hasAnyRole('MANAGER', 'WAREHOUSE_ADMIN', 'ADMIN')")
     public InStockCarOrderResponse markInStockOrderReadyForDelivery(@PathVariable UUID id) {
         return orderService.markInStockOrderReadyForDelivery(id);
     }
 
     @PatchMapping("/in-stock/{id}/complete")
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
     public InStockCarOrderResponse completeInStockOrder(@PathVariable UUID id) {
         return orderService.completeInStockOrder(id);
     }
 
     @PatchMapping("/in-stock/{id}/cancel")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public InStockCarOrderResponse cancelInStockOrder(@PathVariable UUID id) {
         return orderService.cancelInStockOrder(id);
     }
 
     @PostMapping("/custom")
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public CustomCarOrderResponse createCustomOrder(
             @RequestBody CreateCustomCarOrderRequest request
     ) {
@@ -84,11 +95,13 @@ public class OrderController {
     }
 
     @GetMapping("/custom/{id}")
+    @PreAuthorize("hasAnyRole('USER', 'MANAGER', 'ADMIN')")
     public CustomCarOrderResponse getCustomOrderById(@PathVariable UUID id) {
         return orderService.getCustomOrderById(id);
     }
 
     @GetMapping("/custom")
+    @PreAuthorize("hasAnyRole('USER', 'MANAGER', 'ADMIN')")
     public List<CustomCarOrderResponse> getAllCustomOrders(
             @RequestParam(required = false) CustomOrderStatus status
     ) {
@@ -100,36 +113,43 @@ public class OrderController {
     }
 
     @PatchMapping("/custom/{id}/approve-by-warehouse")
+    @PreAuthorize("hasAnyRole('WAREHOUSE_ADMIN', 'ADMIN')")
     public CustomCarOrderResponse approveCustomOrderByWarehouse(@PathVariable UUID id) {
         return orderService.approveCustomOrderByWarehouse(id);
     }
 
     @PatchMapping("/custom/{id}/waiting-for-payment")
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
     public CustomCarOrderResponse moveCustomOrderToWaitingForPayment(@PathVariable UUID id) {
         return orderService.moveCustomOrderToWaitingForPayment(id);
     }
 
     @PatchMapping("/custom/{id}/pay")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public CustomCarOrderResponse payCustomOrder(@PathVariable UUID id) {
         return orderService.payCustomOrder(id);
     }
 
     @PatchMapping("/custom/{id}/waiting-for-delivery")
+    @PreAuthorize("hasAnyRole('WAREHOUSE_ADMIN', 'ADMIN')")
     public CustomCarOrderResponse moveCustomOrderToWaitingForDelivery(@PathVariable UUID id) {
         return orderService.moveCustomOrderToWaitingForDelivery(id);
     }
 
     @PatchMapping("/custom/{id}/ready-for-delivery")
+    @PreAuthorize("hasAnyRole('WAREHOUSE_ADMIN', 'ADMIN')")
     public CustomCarOrderResponse markCustomOrderReadyForDelivery(@PathVariable UUID id) {
         return orderService.markCustomOrderReadyForDelivery(id);
     }
 
     @PatchMapping("/custom/{id}/complete")
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
     public CustomCarOrderResponse completeCustomOrder(@PathVariable UUID id) {
         return orderService.completeCustomOrder(id);
     }
 
     @PatchMapping("/custom/{id}/cancel")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public CustomCarOrderResponse cancelCustomOrder(@PathVariable UUID id) {
         return orderService.cancelCustomOrder(id);
     }

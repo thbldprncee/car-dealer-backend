@@ -15,5 +15,7 @@ public interface InStockCarOrderRepository extends JpaRepository<InStockCarOrder
 
     List<InStockCarOrder> findAllByClientIdAndRemovedFalse(UUID clientId);
 
+    List<InStockCarOrder> findAllByClientIdAndStatusAndRemovedFalse(UUID clientId, InStockOrderStatus status);
+
     List<InStockCarOrder> findAllBySalesManagerIdAndRemovedFalse(UUID salesManagerId);
 }

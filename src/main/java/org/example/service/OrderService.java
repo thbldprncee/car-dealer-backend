@@ -1,6 +1,7 @@
 package org.example.service;
 
 import lombok.RequiredArgsConstructor;
+import org.example.config.security.CurrentUserService;
 import org.example.domain.enums.CustomOrderStatus;
 import org.example.domain.enums.InStockOrderStatus;
 import org.example.domain.exceptions.DomainValidationException;
@@ -25,6 +26,7 @@ import org.example.repository.ClientRepository;
 import org.example.repository.CustomCarOrderRepository;
 import org.example.repository.InStockCarOrderRepository;
 import org.example.repository.SalesManagerRepository;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +37,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class OrderService {
+
+    private final CurrentUserService currentUserService;
 
     private final ClientRepository clientRepository;
     private final SalesManagerRepository salesManagerRepository;
@@ -48,12 +52,15 @@ public class OrderService {
     private final CustomCarOrderMapper customCarOrderMapper = CustomCarOrderMapper.INSTANCE;
 
     @Transactional
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public InStockCarOrderResponse createInStockOrder(CreateInStockCarOrderRequest request) {
         validateCreateInStockOrderRequest(request);
 
-        Client client = clientRepository.findById(request.clientId())
+        UUID currentUserId = currentUserService.getCurrentUserId();
+
+        Client client = clientRepository.findById(currentUserId)
                 .filter(existingClient -> !existingClient.isRemoved())
-                .orElseThrow(() -> new EntityNotFoundException("Client", request.clientId()));
+                .orElseThrow(() -> new EntityNotFoundException("Client", currentUserId));
 
         Car car = carRepository.findById(request.carId())
                 .filter(existingCar -> !existingCar.isRemoved())
@@ -77,12 +84,15 @@ public class OrderService {
     }
 
     @Transactional
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public CustomCarOrderResponse createCustomOrder(CreateCustomCarOrderRequest request) {
         validateCreateCustomOrderRequest(request);
 
-        Client client = clientRepository.findById(request.clientId())
+        UUID currentUserId = currentUserService.getCurrentUserId();
+
+        Client client = clientRepository.findById(currentUserId)
                 .filter(existingClient -> !existingClient.isRemoved())
-                .orElseThrow(() -> new EntityNotFoundException("Client", request.clientId()));
+                .orElseThrow(() -> new EntityNotFoundException("Client", currentUserId));
 
         CarModel carModel = carModelRepository.findById(request.carModelId())
                 .filter(existingCarModel -> !existingCarModel.isRemoved())
@@ -110,6 +120,7 @@ public class OrderService {
         return customCarOrderMapper.toResponse(customCarOrderRepository.save(order));
     }
 
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN') or @orderSecurityService.isInStockOrderOwner(#id)")
     public InStockCarOrderResponse getInStockOrderById(UUID id) {
         return inStockCarOrderRepository.findById(id)
                 .filter(order -> !order.isRemoved())
@@ -117,6 +128,7 @@ public class OrderService {
                 .orElseThrow(() -> new EntityNotFoundException("InStockCarOrder", id));
     }
 
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN') or @orderSecurityService.isCustomOrderOwner(#id)")
     public CustomCarOrderResponse getCustomOrderById(UUID id) {
         return customCarOrderRepository.findById(id)
                 .filter(order -> !order.isRemoved())
@@ -124,18 +136,29 @@ public class OrderService {
                 .orElseThrow(() -> new EntityNotFoundException("CustomCarOrder", id));
     }
 
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
     public List<InStockCarOrderResponse> getAllInStockOrders() {
         return inStockCarOrderRepository.findAllByRemovedFalse().stream()
                 .map(inStockCarOrderMapper::toResponse)
                 .toList();
     }
 
+    @PreAuthorize("hasAnyRole('USER', 'MANAGER', 'ADMIN')")
     public List<CustomCarOrderResponse> getAllCustomOrders() {
-        return customCarOrderRepository.findAllByRemovedFalse().stream()
+        if (currentUserService.hasAnyRole("MANAGER", "ADMIN")) {
+            return customCarOrderRepository.findAllByRemovedFalse().stream()
+                    .map(customCarOrderMapper::toResponse)
+                    .toList();
+        }
+
+        UUID currentUserId = currentUserService.getCurrentUserId();
+
+        return customCarOrderRepository.findAllByClientIdAndRemovedFalse(currentUserId).stream()
                 .map(customCarOrderMapper::toResponse)
                 .toList();
     }
 
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
     public List<InStockCarOrderResponse> getInStockOrdersByStatus(InStockOrderStatus status) {
         if (status == null) {
             throw new DomainValidationException("In-stock order status must not be null");
@@ -146,17 +169,27 @@ public class OrderService {
                 .toList();
     }
 
+    @PreAuthorize("hasAnyRole('USER', 'MANAGER', 'ADMIN')")
     public List<CustomCarOrderResponse> getCustomOrdersByStatus(CustomOrderStatus status) {
         if (status == null) {
             throw new DomainValidationException("Custom order status must not be null");
         }
 
-        return customCarOrderRepository.findAllByStatusAndRemovedFalse(status).stream()
+        if (currentUserService.hasAnyRole("MANAGER", "ADMIN")) {
+            return customCarOrderRepository.findAllByStatusAndRemovedFalse(status).stream()
+                    .map(customCarOrderMapper::toResponse)
+                    .toList();
+        }
+
+        UUID currentUserId = currentUserService.getCurrentUserId();
+
+        return customCarOrderRepository.findAllByClientIdAndStatusAndRemovedFalse(currentUserId, status).stream()
                 .map(customCarOrderMapper::toResponse)
                 .toList();
     }
 
     @Transactional
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
     public InStockCarOrderResponse approveInStockOrderByManager(UUID orderId) {
         InStockCarOrder order = findActiveInStockOrder(orderId);
         order.approveByManager();
@@ -164,6 +197,7 @@ public class OrderService {
     }
 
     @Transactional
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
     public InStockCarOrderResponse moveInStockOrderToWaitingForPayment(UUID orderId) {
         InStockCarOrder order = findActiveInStockOrder(orderId);
         order.markWaitingForPayment();
@@ -171,6 +205,7 @@ public class OrderService {
     }
 
     @Transactional
+    @PreAuthorize("hasRole('ADMIN') or @orderSecurityService.isInStockOrderOwner(#orderId)")
     public InStockCarOrderResponse payInStockOrder(UUID orderId) {
         InStockCarOrder order = findActiveInStockOrder(orderId);
         order.markAsPaid();
@@ -178,6 +213,7 @@ public class OrderService {
     }
 
     @Transactional
+    @PreAuthorize("hasAnyRole('MANAGER', 'WAREHOUSE_ADMIN', 'ADMIN')")
     public InStockCarOrderResponse markInStockOrderReadyForDelivery(UUID orderId) {
         InStockCarOrder order = findActiveInStockOrder(orderId);
         order.markReadyForDelivery();
@@ -185,6 +221,7 @@ public class OrderService {
     }
 
     @Transactional
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
     public InStockCarOrderResponse completeInStockOrder(UUID orderId) {
         InStockCarOrder order = findActiveInStockOrder(orderId);
         order.complete();
@@ -192,6 +229,7 @@ public class OrderService {
     }
 
     @Transactional
+    @PreAuthorize("hasRole('ADMIN') or @orderSecurityService.isInStockOrderOwner(#orderId)")
     public InStockCarOrderResponse cancelInStockOrder(UUID orderId) {
         InStockCarOrder order = findActiveInStockOrder(orderId);
         order.cancel();
@@ -199,6 +237,7 @@ public class OrderService {
     }
 
     @Transactional
+    @PreAuthorize("hasAnyRole('WAREHOUSE_ADMIN', 'ADMIN')")
     public CustomCarOrderResponse approveCustomOrderByWarehouse(UUID orderId) {
         CustomCarOrder order = findActiveCustomOrder(orderId);
         order.approveByWarehouse();
@@ -206,6 +245,7 @@ public class OrderService {
     }
 
     @Transactional
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
     public CustomCarOrderResponse moveCustomOrderToWaitingForPayment(UUID orderId) {
         CustomCarOrder order = findActiveCustomOrder(orderId);
         order.markWaitingForPayment();
@@ -213,6 +253,7 @@ public class OrderService {
     }
 
     @Transactional
+    @PreAuthorize("hasRole('ADMIN') or @orderSecurityService.isCustomOrderOwner(#orderId)")
     public CustomCarOrderResponse payCustomOrder(UUID orderId) {
         CustomCarOrder order = findActiveCustomOrder(orderId);
         order.markAsPaid();
@@ -220,6 +261,7 @@ public class OrderService {
     }
 
     @Transactional
+    @PreAuthorize("hasAnyRole('WAREHOUSE_ADMIN', 'ADMIN')")
     public CustomCarOrderResponse moveCustomOrderToWaitingForDelivery(UUID orderId) {
         CustomCarOrder order = findActiveCustomOrder(orderId);
         order.markWaitingForDelivery();
@@ -227,6 +269,7 @@ public class OrderService {
     }
 
     @Transactional
+    @PreAuthorize("hasAnyRole('WAREHOUSE_ADMIN', 'ADMIN')")
     public CustomCarOrderResponse markCustomOrderReadyForDelivery(UUID orderId) {
         CustomCarOrder order = findActiveCustomOrder(orderId);
         order.markReadyForDelivery();
@@ -234,6 +277,7 @@ public class OrderService {
     }
 
     @Transactional
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
     public CustomCarOrderResponse completeCustomOrder(UUID orderId) {
         CustomCarOrder order = findActiveCustomOrder(orderId);
         order.complete();
@@ -241,6 +285,7 @@ public class OrderService {
     }
 
     @Transactional
+    @PreAuthorize("hasRole('ADMIN') or @orderSecurityService.isCustomOrderOwner(#orderId)")
     public CustomCarOrderResponse cancelCustomOrder(UUID orderId) {
         CustomCarOrder order = findActiveCustomOrder(orderId);
         order.cancel();
@@ -270,10 +315,6 @@ public class OrderService {
             throw new DomainValidationException("Create in-stock order request must not be null");
         }
 
-        if (request.clientId() == null) {
-            throw new DomainValidationException("Client id must not be null");
-        }
-
         if (request.carId() == null) {
             throw new DomainValidationException("Car id must not be null");
         }
@@ -282,10 +323,6 @@ public class OrderService {
     private void validateCreateCustomOrderRequest(CreateCustomCarOrderRequest request) {
         if (request == null) {
             throw new DomainValidationException("Create custom order request must not be null");
-        }
-
-        if (request.clientId() == null) {
-            throw new DomainValidationException("Client id must not be null");
         }
 
         if (request.carModelId() == null) {

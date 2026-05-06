@@ -15,5 +15,7 @@ public interface CustomCarOrderRepository extends JpaRepository<CustomCarOrder, 
 
     List<CustomCarOrder> findAllByClientIdAndRemovedFalse(UUID clientId);
 
+    List<CustomCarOrder> findAllByClientIdAndStatusAndRemovedFalse(UUID clientId, CustomOrderStatus status);
+
     List<CustomCarOrder> findAllBySalesManagerIdAndRemovedFalse(UUID salesManagerId);
 }
