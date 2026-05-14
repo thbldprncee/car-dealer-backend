@@ -1,0 +1,627 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-seed-users
+      author: thbldprnce
+      changes:
+        - insert:
+            tableName: users
+            columns:
+              - column:
+                  name: id
+                  value: 11111111-1111-1111-1111-111111111111
+              - column:
+                  name: created_at
+                  valueDate: 2026-01-01T00:00:00Z
+              - column:
+                  name: updated_at
+                  valueDate: 2026-01-01T00:00:00Z
+              - column:
+                  name: removed
+                  valueBoolean: false
+              - column:
+                  name: user_type
+                  value: CLIENT
+              - column:
+                  name: first_name
+                  value: Ivan
+              - column:
+                  name: last_name
+                  value: Petrov
+              - column:
+                  name: email
+                  value: ivan.petrov@example.com
+
+        - insert:
+            tableName: users
+            columns:
+              - column:
+                  name: id
+                  value: 22222222-2222-2222-2222-222222222222
+              - column:
+                  name: created_at
+                  valueDate: 2026-01-01T00:00:00Z
+              - column:
+                  name: updated_at
+                  valueDate: 2026-01-01T00:00:00Z
+              - column:
+                  name: removed
+                  valueBoolean: false
+              - column:
+                  name: user_type
+                  value: SALES_MANAGER
+              - column:
+                  name: first_name
+                  value: Anna
+              - column:
+                  name: last_name
+                  value: Smirnova
+              - column:
+                  name: email
+                  value: anna.smirnova@example.com
+
+        - insert:
+            tableName: users
+            columns:
+              - column:
+                  name: id
+                  value: 33333333-3333-3333-3333-333333333333
+              - column:
+                  name: created_at
+                  valueDate: 2026-01-01T00:00:00Z
+              - column:
+                  name: updated_at
+                  valueDate: 2026-01-01T00:00:00Z
+              - column:
+                  name: removed
+                  valueBoolean: false
+              - column:
+                  name: user_type
+                  value: WAREHOUSE_ADMIN
+              - column:
+                  name: first_name
+                  value: Oleg
+              - column:
+                  name: last_name
+                  value: Sokolov
+              - column:
+                  name: email
+                  value: oleg.sokolov@example.com
+
+        - insert:
+            tableName: users
+            columns:
+              - column:
+                  name: id
+                  value: 44444444-4444-4444-4444-444444444444
+              - column:
+                  name: created_at
+                  valueDate: 2026-01-01T00:00:00Z
+              - column:
+                  name: updated_at
+                  valueDate: 2026-01-01T00:00:00Z
+              - column:
+                  name: removed
+                  valueBoolean: false
+              - column:
+                  name: user_type
+                  value: SYSTEM_ADMIN
+              - column:
+                  name: first_name
+                  value: Maria
+              - column:
+                  name: last_name
+                  value: Ivanova
+              - column:
+                  name: email
+                  value: maria.ivanova@example.com
+
+  - changeSet:
+      id: 003-seed-component-options
+      author: thbldprnce
+      changes:
+        - insert:
+            tableName: component_options
+            columns:
+              - column:
+                  name: id
+                  value: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1
+              - column:
+                  name: created_at
+                  valueDate: 2026-01-01T00:00:00Z
+              - column:
+                  name: updated_at
+                  valueDate: 2026-01-01T00:00:00Z
+              - column:
+                  name: removed
+                  valueBoolean: false
+              - column:
+                  name: type
+                  value: WHEELS
+              - column:
+                  name: name
+                  value: 17 Standard
+              - column:
+                  name: price_delta
+                  valueNumeric: 0
+
+        - insert:
+            tableName: component_options
+            columns:
+              - column:
+                  name: id
+                  value: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2
+              - column:
+                  name: created_at
+                  valueDate: 2026-01-01T00:00:00Z
+              - column:
+                  name: updated_at
+                  valueDate: 2026-01-01T00:00:00Z
+              - column:
+                  name: removed
+                  valueBoolean: false
+              - column:
+                  name: type
+                  value: WHEELS
+              - column:
+                  name: name
+                  value: 19 M-Sport
+              - column:
+                  name: price_delta
+                  valueNumeric: 95000
+
+        - insert:
+            tableName: component_options
+            columns:
+              - column:
+                  name: id
+                  value: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3
+              - column:
+                  name: created_at
+                  valueDate: 2026-01-01T00:00:00Z
+              - column:
+                  name: updated_at
+                  valueDate: 2026-01-01T00:00:00Z
+              - column:
+                  name: removed
+                  valueBoolean: false
+              - column:
+                  name: type
+                  value: TRANSMISSION
+              - column:
+                  name: name
+                  value: Automatic 8AT
+              - column:
+                  name: price_delta
+                  valueNumeric: 0
+
+        - insert:
+            tableName: component_options
+            columns:
+              - column:
+                  name: id
+                  value: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa4
+              - column:
+                  name: created_at
+                  valueDate: 2026-01-01T00:00:00Z
+              - column:
+                  name: updated_at
+                  valueDate: 2026-01-01T00:00:00Z
+              - column:
+                  name: removed
+                  valueBoolean: false
+              - column:
+                  name: type
+                  value: STEERING_WHEEL
+              - column:
+                  name: name
+                  value: Sport leather standard
+              - column:
+                  name: price_delta
+                  valueNumeric: 0
+
+        - insert:
+            tableName: component_options
+            columns:
+              - column:
+                  name: id
+                  value: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa5
+              - column:
+                  name: created_at
+                  valueDate: 2026-01-01T00:00:00Z
+              - column:
+                  name: updated_at
+                  valueDate: 2026-01-01T00:00:00Z
+              - column:
+                  name: removed
+                  valueBoolean: false
+              - column:
+                  name: type
+                  value: STEERING_WHEEL
+              - column:
+                  name: name
+                  value: M-Sport heated
+              - column:
+                  name: price_delta
+                  valueNumeric: 25000
+
+        - insert:
+            tableName: component_options
+            columns:
+              - column:
+                  name: id
+                  value: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa6
+              - column:
+                  name: created_at
+                  valueDate: 2026-01-01T00:00:00Z
+              - column:
+                  name: updated_at
+                  valueDate: 2026-01-01T00:00:00Z
+              - column:
+                  name: removed
+                  valueBoolean: false
+              - column:
+                  name: type
+                  value: INTERIOR
+              - column:
+                  name: name
+                  value: Graphite fabric
+              - column:
+                  name: price_delta
+                  valueNumeric: 0
+
+        - insert:
+            tableName: component_options
+            columns:
+              - column:
+                  name: id
+                  value: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa7
+              - column:
+                  name: created_at
+                  valueDate: 2026-01-01T00:00:00Z
+              - column:
+                  name: updated_at
+                  valueDate: 2026-01-01T00:00:00Z
+              - column:
+                  name: removed
+                  valueBoolean: false
+              - column:
+                  name: type
+                  value: INTERIOR
+              - column:
+                  name: name
+                  value: Dakota leather
+              - column:
+                  name: price_delta
+                  valueNumeric: 110000
+
+  - changeSet:
+      id: 004-seed-car-models
+      author: thbldprnce
+      changes:
+        - insert:
+            tableName: car_models
+            columns:
+              - column:
+                  name: id
+                  value: bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1
+              - column:
+                  name: created_at
+                  valueDate: 2026-01-01T00:00:00Z
+              - column:
+                  name: updated_at
+                  valueDate: 2026-01-01T00:00:00Z
+              - column:
+                  name: removed
+                  valueBoolean: false
+              - column:
+                  name: brand
+                  value: BMW
+              - column:
+                  name: model_name
+                  value: 320i
+              - column:
+                  name: body_type
+                  value: SEDAN
+              - column:
+                  name: fuel_type
+                  value: PETROL
+              - column:
+                  name: engine_power
+                  valueNumeric: 184
+              - column:
+                  name: engine_volume
+                  valueNumeric: 2.0
+              - column:
+                  name: transmission_type
+                  value: AUTOMATIC
+              - column:
+                  name: drive_type
+                  value: REAR_WHEEL
+              - column:
+                  name: base_price
+                  valueNumeric: 3500000
+
+  - changeSet:
+      id: 005-seed-component-compatibility
+      author: thbldprnce
+      changes:
+        - insert:
+            tableName: component_option_compatible_car_models
+            columns:
+              - column:
+                  name: component_option_id
+                  value: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1
+              - column:
+                  name: car_model_id
+                  value: bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1
+
+        - insert:
+            tableName: component_option_compatible_car_models
+            columns:
+              - column:
+                  name: component_option_id
+                  value: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2
+              - column:
+                  name: car_model_id
+                  value: bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1
+
+        - insert:
+            tableName: component_option_compatible_car_models
+            columns:
+              - column:
+                  name: component_option_id
+                  value: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3
+              - column:
+                  name: car_model_id
+                  value: bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1
+
+        - insert:
+            tableName: component_option_compatible_car_models
+            columns:
+              - column:
+                  name: component_option_id
+                  value: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa4
+              - column:
+                  name: car_model_id
+                  value: bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1
+
+        - insert:
+            tableName: component_option_compatible_car_models
+            columns:
+              - column:
+                  name: component_option_id
+                  value: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa5
+              - column:
+                  name: car_model_id
+                  value: bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1
+
+        - insert:
+            tableName: component_option_compatible_car_models
+            columns:
+              - column:
+                  name: component_option_id
+                  value: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa6
+              - column:
+                  name: car_model_id
+                  value: bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1
+
+        - insert:
+            tableName: component_option_compatible_car_models
+            columns:
+              - column:
+                  name: component_option_id
+                  value: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa7
+              - column:
+                  name: car_model_id
+                  value: bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1
+
+  - changeSet:
+      id: 006-seed-car-model-required-components
+      author: thbldprnce
+      changes:
+        - insert:
+            tableName: car_model_required_component_types
+            columns:
+              - column:
+                  name: car_model_id
+                  value: bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1
+              - column:
+                  name: component_type
+                  value: WHEELS
+
+        - insert:
+            tableName: car_model_required_component_types
+            columns:
+              - column:
+                  name: car_model_id
+                  value: bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1
+              - column:
+                  name: component_type
+                  value: TRANSMISSION
+
+        - insert:
+            tableName: car_model_required_component_types
+            columns:
+              - column:
+                  name: car_model_id
+                  value: bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1
+              - column:
+                  name: component_type
+                  value: STEERING_WHEEL
+
+        - insert:
+            tableName: car_model_required_component_types
+            columns:
+              - column:
+                  name: car_model_id
+                  value: bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1
+              - column:
+                  name: component_type
+                  value: INTERIOR
+
+  - changeSet:
+      id: 007-seed-car-model-base-components
+      author: thbldprnce
+      changes:
+        - insert:
+            tableName: car_model_base_components
+            columns:
+              - column:
+                  name: car_model_id
+                  value: bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1
+              - column:
+                  name: component_option_id
+                  value: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1
+              - column:
+                  name: component_type
+                  value: WHEELS
+
+        - insert:
+            tableName: car_model_base_components
+            columns:
+              - column:
+                  name: car_model_id
+                  value: bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1
+              - column:
+                  name: component_option_id
+                  value: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3
+              - column:
+                  name: component_type
+                  value: TRANSMISSION
+
+        - insert:
+            tableName: car_model_base_components
+            columns:
+              - column:
+                  name: car_model_id
+                  value: bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1
+              - column:
+                  name: component_option_id
+                  value: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa4
+              - column:
+                  name: component_type
+                  value: STEERING_WHEEL
+
+        - insert:
+            tableName: car_model_base_components
+            columns:
+              - column:
+                  name: car_model_id
+                  value: bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1
+              - column:
+                  name: component_option_id
+                  value: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa6
+              - column:
+                  name: component_type
+                  value: INTERIOR
+
+  - changeSet:
+      id: 008-seed-cars
+      author: thbldprnce
+      changes:
+        - insert:
+            tableName: cars
+            columns:
+              - column:
+                  name: id
+                  value: cccccccc-cccc-cccc-cccc-ccccccccccc1
+              - column:
+                  name: created_at
+                  valueDate: 2026-01-01T00:00:00Z
+              - column:
+                  name: updated_at
+                  valueDate: 2026-01-01T00:00:00Z
+              - column:
+                  name: removed
+                  valueBoolean: false
+              - column:
+                  name: car_model_id
+                  value: bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1
+              - column:
+                  name: vin
+                  value: VIN-BMW-320I-0001
+              - column:
+                  name: color
+                  value: BLACK
+              - column:
+                  name: price
+                  valueNumeric: 3650000
+              - column:
+                  name: available
+                  valueBoolean: true
+              - column:
+                  name: available_for_test_drive
+                  valueBoolean: true
+
+        - insert:
+            tableName: cars
+            columns:
+              - column:
+                  name: id
+                  value: cccccccc-cccc-cccc-cccc-ccccccccccc2
+              - column:
+                  name: created_at
+                  valueDate: 2026-01-01T00:00:00Z
+              - column:
+                  name: updated_at
+                  valueDate: 2026-01-01T00:00:00Z
+              - column:
+                  name: removed
+                  valueBoolean: false
+              - column:
+                  name: car_model_id
+                  value: bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1
+              - column:
+                  name: vin
+                  value: VIN-BMW-320I-0002
+              - column:
+                  name: color
+                  value: WHITE
+              - column:
+                  name: price
+                  valueNumeric: 3620000
+              - column:
+                  name: available
+                  valueBoolean: true
+              - column:
+                  name: available_for_test_drive
+                  valueBoolean: true
+
+  - changeSet:
+      id: 009-seed-spare-parts
+      author: thbldprnce
+      changes:
+        - insert:
+            tableName: spare_parts
+            columns:
+              - column:
+                  name: id
+                  value: dddddddd-dddd-dddd-dddd-ddddddddddd1
+              - column:
+                  name: created_at
+                  valueDate: 2026-01-01T00:00:00Z
+              - column:
+                  name: updated_at
+                  valueDate: 2026-01-01T00:00:00Z
+              - column:
+                  name: removed
+                  valueBoolean: false
+              - column:
+                  name: name
+                  value: BMW oil filter
+              - column:
+                  name: description
+                  value: Original oil filter for BMW 320i
+              - column:
+                  name: price
+                  valueNumeric: 4500
+
+        - insert:
+            tableName: spare_part_compatible_car_models
+            columns:
+              - column:
+                  name: spare_part_id
+                  value: dddddddd-dddd-dddd-dddd-ddddddddddd1
+              - column:
+                  name: car_model_id
+                  value: bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1

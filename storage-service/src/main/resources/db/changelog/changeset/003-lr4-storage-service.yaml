@@ -1,0 +1,187 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-storage-service-assembly-orders
+      author: thbldprnce
+      changes:
+        - createTable:
+            tableName: assembly_orders
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: removed
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: source_order_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: source_order_type
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: car_id
+                  type: uuid
+              - column:
+                  name: car_model_id
+                  type: uuid
+              - column:
+                  name: warehouse_admin_id
+                  type: uuid
+              - column:
+                  name: status
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: failure_reason
+                  type: varchar(1000)
+              - column:
+                  name: trace_id
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+        - createTable:
+            tableName: assembly_order_required_components
+            columns:
+              - column:
+                  name: assembly_order_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: component_option_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: assembly_order_required_components
+            baseColumnNames: assembly_order_id
+            referencedTableName: assembly_orders
+            referencedColumnNames: id
+            constraintName: fk_assembly_order_required_components_order
+
+  - changeSet:
+      id: 003-storage-service-processed-events
+      author: thbldprnce
+      changes:
+        - createTable:
+            tableName: processed_events
+            columns:
+              - column:
+                  name: event_id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: event_type
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: trace_id
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: processed_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 003-storage-service-outbox
+      author: thbldprnce
+      changes:
+        - createTable:
+            tableName: outbox_events
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: removed
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: aggregate_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: aggregate_type
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: event_type
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: payload
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: topic
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: trace_id
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: sent_at
+                  type: timestamp with time zone
+              - column:
+                  name: retry_count
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_error
+                  type: varchar(1000)

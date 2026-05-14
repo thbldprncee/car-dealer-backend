@@ -1,0 +1,112 @@
+services:
+  order-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: order_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "15433:5432"
+    volumes:
+      - order_db_data:/var/lib/postgresql/data
+
+  storage-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: storage_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "15434:5432"
+    volumes:
+      - storage_db_data:/var/lib/postgresql/data
+
+  kafka:
+    image: apache/kafka:3.7.2
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:19092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    ports:
+      - "19092:29092"
+    volumes:
+      - kafka_data:/tmp/kraft-combined-logs
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 20s
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME_STRICT: "false"
+    ports:
+      - "18180:8080"
+    volumes:
+      - ./docker/keycloak:/opt/keycloak/data/import:ro
+
+  order-service:
+    build:
+      context: .
+      dockerfile: order-service/Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://order-db:5432/order_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KEYCLOAK_ISSUER_URI: http://localhost:18180/realms/car-dealer
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/car-dealer/protocol/openid-connect/certs
+      STORAGE_SERVICE_BASE_URL: http://storage-service:8081
+      SERVER_PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      order-db:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+
+  storage-service:
+    build:
+      context: .
+      dockerfile: storage-service/Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://storage-db:5432/storage_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KEYCLOAK_ISSUER_URI: http://localhost:18180/realms/car-dealer
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/car-dealer/protocol/openid-connect/certs
+      SERVER_PORT: 8081
+    ports:
+      - "18081:8081"
+    depends_on:
+      storage-db:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+
+volumes:
+  order_db_data:
+  storage_db_data:
+  kafka_data:

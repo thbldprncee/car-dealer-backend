@@ -1,0 +1,119 @@
+{
+  "realm": "car-dealer",
+  "enabled": true,
+  "sslRequired": "none",
+  "clients": [
+    {
+      "clientId": "car-dealer-backend",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "protocol": "openid-connect",
+      "attributes": {
+        "post.logout.redirect.uris": "+"
+      }
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "CLIENT"
+      },
+      {
+        "name": "SALES_MANAGER"
+      },
+      {
+        "name": "WAREHOUSE_ADMIN"
+      },
+      {
+        "name": "ADMIN"
+      }
+    ]
+  },
+  "users": [
+    {
+      "id": "11111111-1111-1111-1111-111111111111",
+      "username": "user",
+      "enabled": true,
+      "email": "user@example.com",
+      "firstName": "Test",
+      "lastName": "User",
+      "emailVerified": true,
+      "requiredActions": [],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "user",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "CLIENT"
+      ]
+    },
+    {
+      "id": "22222222-2222-2222-2222-222222222222",
+      "username": "manager",
+      "enabled": true,
+      "email": "manager@example.com",
+      "firstName": "Test",
+      "lastName": "Manager",
+      "emailVerified": true,
+      "requiredActions": [],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "manager",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "SALES_MANAGER"
+      ]
+    },
+    {
+      "id": "33333333-3333-3333-3333-333333333333",
+      "username": "warehouse",
+      "enabled": true,
+      "email": "warehouse@example.com",
+      "firstName": "Test",
+      "lastName": "Warehouse",
+      "emailVerified": true,
+      "requiredActions": [],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "warehouse",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "WAREHOUSE_ADMIN"
+      ]
+    },
+    {
+      "id": "44444444-4444-4444-4444-444444444444",
+      "username": "admin",
+      "enabled": true,
+      "email": "admin@example.com",
+      "firstName": "Test",
+      "lastName": "Admin",
+      "emailVerified": true,
+      "requiredActions": [],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "ADMIN",
+        "CLIENT",
+        "SALES_MANAGER",
+        "WAREHOUSE_ADMIN"
+      ]
+    }
+  ]
+}

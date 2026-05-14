@@ -1,0 +1,56 @@
+spring:
+  application:
+    name: order-service
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/order_db}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  liquibase:
+    enabled: true
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      group-id: order-service
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: earliest
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:18180/realms/car-dealer}
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:18180/realms/car-dealer/protocol/openid-connect/certs}
+
+server:
+  port: ${SERVER_PORT:8080}
+
+app:
+  storage-service:
+    base-url: ${STORAGE_SERVICE_BASE_URL:http://localhost:18081}
+  kafka:
+    topics:
+      order-sent-for-approval: order.sent-for-approval
+      order-approval-result: order.approval-result
+  outbox:
+    fixed-delay: 3000
+    max-retries: 5
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html

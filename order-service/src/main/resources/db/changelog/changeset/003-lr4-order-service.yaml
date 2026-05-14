@@ -1,0 +1,144 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-order-service-snapshots
+      author: thbldprnce
+      changes:
+        - addColumn:
+            tableName: in_stock_car_orders
+            columns:
+              - column:
+                  name: car_display_name
+                  type: varchar(255)
+                  defaultValue: Unknown car
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: custom_car_orders
+            columns:
+              - column:
+                  name: car_model_display_name
+                  type: varchar(255)
+                  defaultValue: Unknown car model
+                  constraints:
+                    nullable: false
+              - column:
+                  name: total_price
+                  type: numeric(19, 2)
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: test_drive_requests
+            columns:
+              - column:
+                  name: car_display_name
+                  type: varchar(255)
+                  defaultValue: Unknown car
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 003-order-service-outbox
+      author: thbldprnce
+      changes:
+        - createTable:
+            tableName: outbox_events
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: removed
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: aggregate_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: aggregate_type
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: event_type
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: payload
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: topic
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: trace_id
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: sent_at
+                  type: timestamp with time zone
+              - column:
+                  name: retry_count
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_error
+                  type: varchar(1000)
+
+  - changeSet:
+      id: 003-order-service-processed-events
+      author: thbldprnce
+      changes:
+        - createTable:
+            tableName: processed_events
+            columns:
+              - column:
+                  name: event_id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: event_type
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: trace_id
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: processed_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
