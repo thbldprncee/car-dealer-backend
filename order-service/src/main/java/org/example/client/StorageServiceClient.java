@@ -1,9 +1,9 @@
 package org.example.client;
 
 import lombok.RequiredArgsConstructor;
+import org.example.config.properties.StorageServiceProperties;
 import org.example.domain.enums.CarColor;
 import org.example.domain.exceptions.EntityNotFoundException;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -20,15 +20,13 @@ import java.util.UUID;
 public class StorageServiceClient {
 
     private final RestClient.Builder restClientBuilder;
-
-    @Value("${app.storage-service.base-url:http://localhost:18081}")
-    private String storageServiceBaseUrl;
+    private final StorageServiceProperties storageServiceProperties;
 
     public CarConfigurationSnapshot getConfiguration(UUID configurationId) {
         try {
             return restClientBuilder.build()
                     .get()
-                    .uri(storageServiceBaseUrl + "/api/configurations/{id}", configurationId)
+                    .uri(storageServiceProperties.baseUrl() + "/api/configurations/{id}", configurationId)
                     .headers(headers -> bearerToken().ifPresent(headers::setBearerAuth))
                     .retrieve()
                     .body(CarConfigurationSnapshot.class);
@@ -41,7 +39,7 @@ public class StorageServiceClient {
         try {
             return restClientBuilder.build()
                     .get()
-                    .uri(storageServiceBaseUrl + "/api/cars/{id}", carId)
+                    .uri(storageServiceProperties.baseUrl() + "/api/cars/{id}", carId)
                     .headers(headers -> bearerToken().ifPresent(headers::setBearerAuth))
                     .retrieve()
                     .body(CarSnapshot.class);

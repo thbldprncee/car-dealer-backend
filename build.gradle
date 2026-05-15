@@ -1,6 +1,7 @@
 plugins {
     id 'org.springframework.boot' version '3.5.4' apply false
     id 'io.spring.dependency-management' version '1.1.7' apply false
+    id 'com.google.protobuf' version '0.9.4' apply false
 }
 
 group = 'org.example'
@@ -10,6 +11,8 @@ ext {
     testcontainersVersion = '1.21.4'
     mapstructVersion = '1.6.3'
     lombokVersion = '1.18.42'
+    grpcVersion = '1.68.1'
+    protobufVersion = '4.28.2'
 }
 
 subprojects {

@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "org.example.grpc";
+option java_outer_classname = "CarInventoryProto";
+
+package carinventory;
+
+service CarInventoryService {
+  rpc GetAvailableCars(GetAvailableCarsRequest) returns (GetAvailableCarsResponse);
+  rpc GetAvailableCarById(GetAvailableCarByIdRequest) returns (AvailableCarResponse);
+}
+
+message GetAvailableCarsRequest {
+}
+
+message GetAvailableCarByIdRequest {
+  string id = 1;
+}
+
+message GetAvailableCarsResponse {
+  repeated AvailableCarResponse cars = 1;
+}
+
+message AvailableCarResponse {
+  string id = 1;
+  string car_model_id = 2;
+  string car_model_display_name = 3;
+  string vin = 4;
+  string color = 5;
+  string price = 6;
+  bool available = 7;
+  bool available_for_test_drive = 8;
+}

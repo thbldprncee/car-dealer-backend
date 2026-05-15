@@ -345,7 +345,6 @@ public class OrderService {
                 null,
                 order.getCarModelId(),
                 order.getCarConfigurationId(),
-                // Component option ids are resolved by storage-service using configurationId.
                 List.of(),
                 traceId,
                 Instant.now()

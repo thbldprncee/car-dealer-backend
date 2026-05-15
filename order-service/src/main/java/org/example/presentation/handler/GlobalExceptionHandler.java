@@ -2,6 +2,7 @@ package org.example.presentation.handler;
 
 import org.example.domain.exceptions.DomainValidationException;
 import org.example.domain.exceptions.EntityNotFoundException;
+import org.example.domain.exceptions.GrpcServiceUnavailableException;
 import org.example.domain.exceptions.IncompatibleComponentException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -43,6 +44,18 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ApiErrorResponse.of(
                         HttpStatus.BAD_REQUEST,
+                        exception.getMessage()
+                ));
+    }
+
+    @ExceptionHandler(GrpcServiceUnavailableException.class)
+    public ResponseEntity<ApiErrorResponse> handleGrpcServiceUnavailableException(
+            GrpcServiceUnavailableException exception
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ApiErrorResponse.of(
+                        HttpStatus.SERVICE_UNAVAILABLE,
                         exception.getMessage()
                 ));
     }

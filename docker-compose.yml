@@ -73,6 +73,9 @@ services:
       KEYCLOAK_ISSUER_URI: http://localhost:18180/realms/car-dealer
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/car-dealer/protocol/openid-connect/certs
       STORAGE_SERVICE_BASE_URL: http://storage-service:8081
+      STORAGE_GRPC_HOST: storage-service
+      STORAGE_GRPC_PORT: 9090
+      STORAGE_GRPC_TIMEOUT_MS: 2000
       SERVER_PORT: 8080
     ports:
       - "8080:8080"
@@ -95,9 +98,11 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KEYCLOAK_ISSUER_URI: http://localhost:18180/realms/car-dealer
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/car-dealer/protocol/openid-connect/certs
+      GRPC_SERVER_PORT: 9090
       SERVER_PORT: 8081
     ports:
       - "18081:8081"
+      - "19090:9090"
     depends_on:
       storage-db:
         condition: service_started

@@ -39,24 +39,25 @@ public class KeycloakJwtAuthenticationConverter implements Converter<Jwt, Abstra
     }
 
     private void addRole(Set<GrantedAuthority> authorities, String keycloakRole) {
-        String mappedRole = mapRoleToTaskRole(keycloakRole);
+        addAuthority(authorities, keycloakRole);
 
-        if (isSecurityRole(mappedRole)) {
-            authorities.add(new SimpleGrantedAuthority("ROLE_" + mappedRole));
+        switch (keycloakRole) {
+            case "CLIENT" -> addAuthority(authorities, "USER");
+            case "SALES_MANAGER" -> addAuthority(authorities, "MANAGER");
+            default -> {
+            }
         }
     }
 
-    private String mapRoleToTaskRole(String keycloakRole) {
-        return switch (keycloakRole) {
-            case "CLIENT" -> "USER";
-            case "SALES_MANAGER" -> "MANAGER";
-            default -> keycloakRole;
-        };
+    private void addAuthority(Set<GrantedAuthority> authorities, String role) {
+        if (isSecurityRole(role)) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
+        }
     }
 
     private boolean isSecurityRole(String role) {
         return switch (role) {
-            case "USER", "MANAGER", "WAREHOUSE_ADMIN", "ADMIN" -> true;
+            case "CLIENT", "USER", "SALES_MANAGER", "MANAGER", "WAREHOUSE_ADMIN", "ADMIN" -> true;
             default -> false;
         };
     }

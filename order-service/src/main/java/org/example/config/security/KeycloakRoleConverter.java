@@ -29,26 +29,31 @@ public class KeycloakRoleConverter implements Converter<Jwt, Collection<GrantedA
         roles.stream()
                 .filter(String.class::isInstance)
                 .map(String.class::cast)
-                .map(this::mapRoleToTaskRole)
-                .filter(this::isSecurityRole)
-                .map(role -> "ROLE_" + role)
-                .map(SimpleGrantedAuthority::new)
-                .forEach(authorities::add);
+                .forEach(role -> addMappedAuthorities(authorities, role));
 
         return authorities;
     }
 
-    private String mapRoleToTaskRole(String keycloakRole) {
-        return switch (keycloakRole) {
-            case "CLIENT" -> "USER";
-            case "SALES_MANAGER" -> "MANAGER";
-            default -> keycloakRole;
-        };
+    private void addMappedAuthorities(List<GrantedAuthority> authorities, String keycloakRole) {
+        addAuthority(authorities, keycloakRole);
+
+        switch (keycloakRole) {
+            case "CLIENT" -> addAuthority(authorities, "USER");
+            case "SALES_MANAGER" -> addAuthority(authorities, "MANAGER");
+            default -> {
+            }
+        }
+    }
+
+    private void addAuthority(List<GrantedAuthority> authorities, String role) {
+        if (isSecurityRole(role)) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
+        }
     }
 
     private boolean isSecurityRole(String role) {
         return switch (role) {
-            case "USER", "MANAGER", "WAREHOUSE_ADMIN", "ADMIN" -> true;
+            case "CLIENT", "USER", "SALES_MANAGER", "MANAGER", "WAREHOUSE_ADMIN", "ADMIN" -> true;
             default -> false;
         };
     }
