@@ -11,9 +11,6 @@ spring:
     hibernate:
       ddl-auto: validate
     open-in-view: false
-    properties:
-      hibernate:
-        format_sql: true
 
   liquibase:
     enabled: true
@@ -55,6 +52,16 @@ app:
   outbox:
     fixed-delay: 3000
     max-retries: 5
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
 
 springdoc:
   swagger-ui:
