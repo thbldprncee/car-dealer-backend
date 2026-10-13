@@ -2,7 +2,6 @@ package io.github.thbldprncee.cardealer.order.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import io.github.thbldprncee.cardealer.order.domain.enums.OutboxEventStatus;
 import io.github.thbldprncee.cardealer.order.domain.model.OutboxEvent;
 import io.github.thbldprncee.cardealer.order.repository.OutboxEventRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,6 +17,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OutboxPublisher {
 
+    private static final int BATCH_SIZE = 50;
+
     @Value("${app.outbox.max-retries:5}")
     private int maxRetries;
 
@@ -27,9 +28,10 @@ public class OutboxPublisher {
     @Scheduled(fixedDelayString = "${app.outbox.fixed-delay:3000}")
     @Transactional
     public void publishNewEvents() {
-        List<OutboxEvent> events = outboxEventRepository
-                .findTop50ByStatusAndRemovedFalseOrderByCreatedAtAsc(OutboxEventStatus.NEW);
-        log.info("Found {} NEW outbox events", events.size());
+        List<OutboxEvent> events = outboxEventRepository.lockNextBatch(BATCH_SIZE);
+        if (!events.isEmpty()) {
+            log.info("Publishing {} outbox events", events.size());
+        }
 
         for (OutboxEvent event : events) {
             try {

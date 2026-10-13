@@ -90,14 +90,6 @@ public class InStockCarOrder extends BaseEntity {
         this.status = InStockOrderStatus.PAID;
     }
 
-    public void markReadyForDelivery() {
-        ensureStatus(
-                InStockOrderStatus.PAID,
-                "Only a paid in-stock order can be marked as ready for delivery"
-        );
-        this.status = InStockOrderStatus.READY_FOR_DELIVERY;
-    }
-
     public void markReadyForDeliveryAfterWarehouseApproval() {
         if (status == InStockOrderStatus.READY_FOR_DELIVERY) {
             return;
@@ -124,6 +116,11 @@ public class InStockCarOrder extends BaseEntity {
                 "Only a paid in-stock order can be canceled after warehouse rejection"
         );
         this.status = InStockOrderStatus.CANCELED;
+    }
+
+    /** The order has been handed to the warehouse, which may have reserved the car for it. */
+    public boolean isSentToWarehouse() {
+        return status == InStockOrderStatus.PAID || status == InStockOrderStatus.READY_FOR_DELIVERY;
     }
 
     public void complete() {

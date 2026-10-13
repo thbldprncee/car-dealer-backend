@@ -16,6 +16,7 @@ import io.github.thbldprncee.cardealer.order.dto.request.CreateCustomCarOrderReq
 import io.github.thbldprncee.cardealer.order.dto.request.CreateInStockCarOrderRequest;
 import io.github.thbldprncee.cardealer.order.dto.response.CustomCarOrderResponse;
 import io.github.thbldprncee.cardealer.order.dto.response.InStockCarOrderResponse;
+import io.github.thbldprncee.cardealer.events.OrderCanceledEvent;
 import io.github.thbldprncee.cardealer.events.OrderSentForApprovalEvent;
 import io.github.thbldprncee.cardealer.events.OrderType;
 import io.github.thbldprncee.cardealer.order.mappers.CustomCarOrderMapper;
@@ -41,6 +42,9 @@ public class OrderService {
 
     @Value("${app.kafka.topics.order-sent-for-approval:order.sent-for-approval}")
     private String orderSentForApprovalTopic;
+
+    @Value("${app.kafka.topics.order-canceled:order.canceled}")
+    private String orderCanceledTopic;
 
     private final CurrentUserService currentUserService;
     private final TraceIdProvider traceIdProvider;
@@ -94,6 +98,10 @@ public class OrderService {
         StorageServiceClient.CarConfigurationSnapshot configuration =
                 storageServiceClient.getConfiguration(request.carConfigurationId());
 
+        if (!request.carModelId().equals(configuration.carModelId())) {
+            throw new DomainValidationException("Configuration belongs to another car model");
+        }
+
         CustomCarOrder order = new CustomCarOrder(
                 UUID.randomUUID(),
                 client,
@@ -104,6 +112,10 @@ public class OrderService {
                 configuration.totalPrice(),
                 CustomOrderStatus.CREATED
         );
+
+        // The warehouse checks that every component of the configuration can be supplied;
+        // its answer moves the order to APPROVED_BY_WAREHOUSE or cancels it.
+        saveOrderSentForApprovalEvent(order);
 
         return customCarOrderMapper.toResponse(customCarOrderRepository.save(order));
     }
@@ -217,14 +229,6 @@ public class OrderService {
 
     @Transactional
     @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
-    public InStockCarOrderResponse markInStockOrderReadyForDelivery(UUID orderId) {
-        InStockCarOrder order = findActiveInStockOrder(orderId);
-        order.markReadyForDelivery();
-        return inStockCarOrderMapper.toResponse(inStockCarOrderRepository.save(order));
-    }
-
-    @Transactional
-    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
     public InStockCarOrderResponse completeInStockOrder(UUID orderId) {
         InStockCarOrder order = findActiveInStockOrder(orderId);
         order.complete();
@@ -235,16 +239,12 @@ public class OrderService {
     @PreAuthorize("hasRole('ADMIN') or @orderSecurityService.isInStockOrderOwner(#orderId)")
     public InStockCarOrderResponse cancelInStockOrder(UUID orderId) {
         InStockCarOrder order = findActiveInStockOrder(orderId);
+        boolean sentToWarehouse = order.isSentToWarehouse();
         order.cancel();
+        if (sentToWarehouse) {
+            saveOrderCanceledEvent(order.getId(), OrderType.IN_STOCK, order.getCarId(), "InStockCarOrder");
+        }
         return inStockCarOrderMapper.toResponse(inStockCarOrderRepository.save(order));
-    }
-
-    @Transactional
-    @PreAuthorize("hasAnyRole('WAREHOUSE_ADMIN', 'ADMIN')")
-    public CustomCarOrderResponse approveCustomOrderByWarehouse(UUID orderId) {
-        CustomCarOrder order = findActiveCustomOrder(orderId);
-        order.approveByWarehouse();
-        return customCarOrderMapper.toResponse(customCarOrderRepository.save(order));
     }
 
     @Transactional
@@ -260,7 +260,6 @@ public class OrderService {
     public CustomCarOrderResponse payCustomOrder(UUID orderId) {
         CustomCarOrder order = findActiveCustomOrder(orderId);
         order.markAsPaid();
-        saveOrderSentForApprovalEvent(order);
         return customCarOrderMapper.toResponse(customCarOrderRepository.save(order));
     }
 
@@ -293,6 +292,8 @@ public class OrderService {
     public CustomCarOrderResponse cancelCustomOrder(UUID orderId) {
         CustomCarOrder order = findActiveCustomOrder(orderId);
         order.cancel();
+        // Custom orders are always sent to the warehouse when created.
+        saveOrderCanceledEvent(order.getId(), OrderType.CUSTOM, null, "CustomCarOrder");
         return customCarOrderMapper.toResponse(customCarOrderRepository.save(order));
     }
 
@@ -355,6 +356,27 @@ public class OrderService {
                 "CustomCarOrder",
                 OrderSentForApprovalEvent.class.getSimpleName(),
                 orderSentForApprovalTopic,
+                event,
+                traceId
+        );
+    }
+
+    private void saveOrderCanceledEvent(UUID orderId, OrderType orderType, UUID carId, String aggregateType) {
+        String traceId = traceIdProvider.getTraceId();
+        OrderCanceledEvent event = new OrderCanceledEvent(
+                UUID.randomUUID(),
+                orderId,
+                orderType,
+                carId,
+                traceId,
+                Instant.now()
+        );
+
+        outboxEventService.saveEvent(
+                orderId,
+                aggregateType,
+                OrderCanceledEvent.class.getSimpleName(),
+                orderCanceledTopic,
                 event,
                 traceId
         );

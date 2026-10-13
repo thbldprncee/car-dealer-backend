@@ -57,7 +57,7 @@ class WarehouseApprovalIdempotencyTest {
 
     @Test
     void repeatedRejectedResultDoesNotBreakCustomOrder() {
-        CustomCarOrder order = customOrder(CustomOrderStatus.PAID);
+        CustomCarOrder order = customOrder(CustomOrderStatus.CREATED);
 
         order.cancelAfterWarehouseRejection("missing components");
         order.cancelAfterWarehouseRejection("missing components");

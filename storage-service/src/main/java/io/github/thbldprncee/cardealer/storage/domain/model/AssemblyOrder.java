@@ -98,6 +98,23 @@ public class AssemblyOrder extends BaseEntity {
                 .orElse("Assembly order failed");
     }
 
+    /**
+     * Records that the source order was canceled.
+     *
+     * @return {@code true} if a car had been reserved for this order and must go back on sale
+     */
+    public boolean cancel() {
+        boolean carReserved = status == AssemblyOrderStatus.ASSEMBLED
+                && sourceOrderType == OrderType.IN_STOCK
+                && carId != null;
+        this.status = AssemblyOrderStatus.CANCELED;
+        return carReserved;
+    }
+
+    public boolean isCanceled() {
+        return status == AssemblyOrderStatus.CANCELED;
+    }
+
     public void assignWarehouseAdmin(UUID warehouseAdminId) {
         this.warehouseAdminId = Optional.ofNullable(warehouseAdminId)
                 .orElseThrow(() -> new DomainValidationException("Warehouse admin id must not be null"));

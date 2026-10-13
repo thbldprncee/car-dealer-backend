@@ -80,14 +80,6 @@ public class CustomCarOrder extends BaseEntity {
                 .orElseThrow(() -> new DomainValidationException("Custom car order status must not be null"));
     }
 
-    public void approveByWarehouse() {
-        ensureStatus(
-                CustomOrderStatus.CREATED,
-                "Only a created custom car order can be approved by warehouse"
-        );
-        this.status = CustomOrderStatus.APPROVED_BY_WAREHOUSE;
-    }
-
     public void approveByWarehouseAfterApprovalResult() {
         if (status != CustomOrderStatus.CREATED) {
             return;
@@ -120,36 +112,20 @@ public class CustomCarOrder extends BaseEntity {
     }
 
     public void markReadyForDelivery() {
-        if (status != CustomOrderStatus.WAITING_FOR_DELIVERY && status != CustomOrderStatus.PAID) {
-            throw new DomainValidationException("Only a paid custom order can be marked as ready for delivery");
-        }
-        this.status = CustomOrderStatus.READY_FOR_DELIVERY;
-    }
-
-    public void markReadyForDeliveryAfterWarehouseApproval() {
-        if (status == CustomOrderStatus.READY_FOR_DELIVERY) {
-            return;
-        }
-        if (status == CustomOrderStatus.CANCELED) {
-            return;
-        }
         ensureStatus(
-                CustomOrderStatus.PAID,
-                "Only a paid custom order can be marked as ready for delivery"
+                CustomOrderStatus.WAITING_FOR_DELIVERY,
+                "Only a custom car order waiting for delivery can be marked as ready for delivery"
         );
         this.status = CustomOrderStatus.READY_FOR_DELIVERY;
     }
-
+    /** Rejection can only arrive while the order still waits for the warehouse check. */
     public void cancelAfterWarehouseRejection(String reason) {
         if (status == CustomOrderStatus.CANCELED) {
             return;
         }
-        if (status == CustomOrderStatus.READY_FOR_DELIVERY) {
-            return;
-        }
         ensureStatus(
-                CustomOrderStatus.PAID,
-                "Only a paid custom order can be canceled after warehouse rejection"
+                CustomOrderStatus.CREATED,
+                "Only a custom order awaiting warehouse approval can be rejected by the warehouse"
         );
         this.status = CustomOrderStatus.CANCELED;
     }

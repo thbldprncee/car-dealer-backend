@@ -1,0 +1,10 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-assembly-order-per-source-order
+      author: thbldprnce
+      comment: One assembly order per customer order, so a duplicated or late approval request cannot reserve a second car.
+      changes:
+        - addUniqueConstraint:
+            tableName: assembly_orders
+            columnNames: source_order_id
+            constraintName: uk_assembly_orders_source_order_id

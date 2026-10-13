@@ -4,15 +4,18 @@ import io.github.thbldprncee.cardealer.order.domain.exceptions.DomainValidationE
 import io.github.thbldprncee.cardealer.order.domain.exceptions.EntityNotFoundException;
 import io.github.thbldprncee.cardealer.order.domain.exceptions.GrpcServiceUnavailableException;
 import io.github.thbldprncee.cardealer.order.domain.exceptions.IncompatibleComponentException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.Instant;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -79,6 +82,16 @@ public class GlobalExceptionHandler {
                 ));
     }
 
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ApiErrorResponse> handleAuthenticationException(AuthenticationException exception) {
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(ApiErrorResponse.of(
+                        HttpStatus.UNAUTHORIZED,
+                        exception.getMessage()
+                ));
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiErrorResponse> handleAccessDeniedException(AccessDeniedException exception) {
         return ResponseEntity
@@ -91,6 +104,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleUnexpectedException(Exception exception) {
+        log.error("Unhandled exception", exception);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiErrorResponse.of(

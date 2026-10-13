@@ -7,3 +7,6 @@ databaseChangeLog:
 
   - include:
       file: db/changelog/changeset/003-lr4-storage-service.yaml
+
+  - include:
+      file: db/changelog/changeset/004-assembly-order-per-source-order.yaml

@@ -1,5 +1,6 @@
 package io.github.thbldprncee.cardealer.storage.config.security;
 
+import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -16,14 +17,14 @@ public class CurrentUserService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null) {
-            throw new IllegalStateException("Current user is not authenticated by JWT");
+            throw new InsufficientAuthenticationException("Current user is not authenticated by JWT");
         }
 
         Jwt jwt = extractJwt(authentication);
         String userId = jwt.getSubject();
 
         if (userId == null || userId.isBlank()) {
-            throw new IllegalStateException("JWT claim sub is missing");
+            throw new InsufficientAuthenticationException("JWT claim sub is missing");
         }
 
         return UUID.fromString(userId);
@@ -38,7 +39,7 @@ public class CurrentUserService {
             return jwt;
         }
 
-        throw new IllegalStateException("Current user is not authenticated by JWT");
+        throw new InsufficientAuthenticationException("Current user is not authenticated by JWT");
     }
 
     public boolean hasRole(String role) {

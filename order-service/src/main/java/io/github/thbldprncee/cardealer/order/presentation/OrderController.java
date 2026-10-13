@@ -68,12 +68,6 @@ public class OrderController {
         return orderService.payInStockOrder(id);
     }
 
-    @PatchMapping("/in-stock/{id}/ready-for-delivery")
-    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
-    public InStockCarOrderResponse markInStockOrderReadyForDelivery(@PathVariable UUID id) {
-        return orderService.markInStockOrderReadyForDelivery(id);
-    }
-
     @PatchMapping("/in-stock/{id}/complete")
     @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
     public InStockCarOrderResponse completeInStockOrder(@PathVariable UUID id) {
@@ -111,12 +105,6 @@ public class OrderController {
         }
 
         return orderService.getCustomOrdersByStatus(status);
-    }
-
-    @PatchMapping("/custom/{id}/approve-by-warehouse")
-    @PreAuthorize("hasAnyRole('WAREHOUSE_ADMIN', 'ADMIN')")
-    public CustomCarOrderResponse approveCustomOrderByWarehouse(@PathVariable UUID id) {
-        return orderService.approveCustomOrderByWarehouse(id);
     }
 
     @PatchMapping("/custom/{id}/waiting-for-payment")

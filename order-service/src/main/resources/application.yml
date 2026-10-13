@@ -51,6 +51,7 @@ app:
     topics:
       order-sent-for-approval: order.sent-for-approval
       order-approval-result: order.approval-result
+      order-canceled: order.canceled
   outbox:
     fixed-delay: 3000
     max-retries: 5

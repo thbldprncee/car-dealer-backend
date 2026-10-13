@@ -29,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -62,6 +63,23 @@ public class OrderSentForApprovalListener {
             if (processedEventRepository.existsById(event.eventId())) {
                 log.info("Skipping duplicate order sent for approval event id={}, traceId={}",
                         event.eventId(), event.traceId());
+                return;
+            }
+
+            Optional<AssemblyOrder> existing = assemblyOrderRepository.findBySourceOrderIdAndRemovedFalse(event.orderId());
+            if (existing.isPresent()) {
+                // The cancellation overtook the approval request: never reserve anything for it.
+                if (existing.get().isCanceled()) {
+                    log.info("Order orderId={} was canceled before approval, rejecting", event.orderId());
+                    publishResult(event, ApprovalDecision.rejected("Order was canceled"));
+                } else {
+                    log.info("Order orderId={} is already being handled by the warehouse, skipping", event.orderId());
+                }
+                processedEventRepository.save(new ProcessedEvent(
+                        event.eventId(),
+                        OrderSentForApprovalEvent.class.getSimpleName(),
+                        event.traceId()
+                ));
                 return;
             }
 

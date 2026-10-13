@@ -14,13 +14,11 @@ class SalesManagerOrderServiceSecurityTest {
     @Test
     void salesManagerAndAdminCanRunDeliveryAndCompletionTransitions() throws NoSuchMethodException {
         assertManagerOrAdmin(OrderService.class, "moveCustomOrderToWaitingForDelivery");
-        assertManagerOrAdmin(OrderService.class, "markInStockOrderReadyForDelivery");
         assertManagerOrAdmin(OrderService.class, "markCustomOrderReadyForDelivery");
         assertManagerOrAdmin(OrderService.class, "completeInStockOrder");
         assertManagerOrAdmin(OrderService.class, "completeCustomOrder");
 
         assertManagerOrAdmin(OrderController.class, "moveCustomOrderToWaitingForDelivery");
-        assertManagerOrAdmin(OrderController.class, "markInStockOrderReadyForDelivery");
         assertManagerOrAdmin(OrderController.class, "markCustomOrderReadyForDelivery");
         assertManagerOrAdmin(OrderController.class, "completeInStockOrder");
         assertManagerOrAdmin(OrderController.class, "completeCustomOrder");
