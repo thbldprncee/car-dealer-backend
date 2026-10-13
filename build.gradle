@@ -4,7 +4,7 @@ plugins {
     id 'com.google.protobuf' version '0.9.4' apply false
 }
 
-group = 'org.example'
+group = 'io.github.thbldprncee'
 version = '1.0-SNAPSHOT'
 
 ext {

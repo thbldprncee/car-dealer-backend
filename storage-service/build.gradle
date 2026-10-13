@@ -44,5 +44,5 @@ dependencies {
 }
 
 springBoot {
-    mainClass = 'org.example.storage.StorageServiceApplication'
+    mainClass = 'io.github.thbldprncee.cardealer.storage.StorageServiceApplication'
 }

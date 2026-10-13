@@ -43,5 +43,5 @@ dependencies {
 }
 
 springBoot {
-    mainClass = 'org.example.order.OrderServiceApplication'
+    mainClass = 'io.github.thbldprncee.cardealer.order.OrderServiceApplication'
 }
