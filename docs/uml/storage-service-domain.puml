@@ -1,0 +1,106 @@
+@startuml storage-service-domain
+!include style.iuml
+skinparam nodesep 40
+skinparam ranksep 50
+
+class CarModel {
+  - brand : String
+  - modelName : String
+  - bodyType : BodyType
+  - fuelType : FuelType
+  - enginePower : int
+  - engineVolume : double
+  - transmissionType : TransmissionType
+  - driveType : DriveType
+  - basePrice : BigDecimal
+  - requiredComponentTypes : Set<ComponentType>
+  + getDisplayName() : String
+  + hasRequiredComponentType(type) : boolean
+}
+
+class ComponentOption {
+  - type : ComponentType
+  - name : String
+  - priceDelta : BigDecimal
+  - compatibleCarModelIds : Set<UUID>
+  + isCompatibleWith(carModel) : boolean
+}
+
+class CarConfiguration {
+  + calculateTotalPrice() : BigDecimal
+  + getSelectedComponent(type) : ComponentOption
+}
+
+class Car {
+  - vin : String
+  - color : CarColor
+  - price : BigDecimal
+  - available : boolean
+  - availableForTestDrive : boolean
+  + markAsAvailable()
+  + markAsUnavailable()
+  + enableTestDrive()
+  + disableTestDrive()
+}
+
+class SparePart {
+  - name : String
+  - description : String
+  - price : BigDecimal
+  - compatibleCarModelIds : Set<UUID>
+  + isCompatibleWith(carModel) : boolean
+}
+
+class AssemblyOrder {
+  - sourceOrderId : UUID  {unique}
+  - sourceOrderType : OrderType
+  - carId : UUID
+  - carModelId : UUID
+  - requiredComponentOptionIds : Set<UUID>
+  - status : AssemblyOrderStatus
+  - failureReason : String
+  - traceId : String
+  + markAsAssembled()
+  + markAsFailed(reason)
+  + cancel() : boolean
+}
+
+enum ComponentType {
+  WHEELS
+  TRANSMISSION
+  STEERING_WHEEL
+  INTERIOR
+}
+
+enum AssemblyOrderStatus {
+  CREATED
+  ASSEMBLED
+  FAIL
+  CANCELED
+}
+
+
+CarModel "1" --> "*" ComponentOption : baseComponents\n[ComponentType]
+CarConfiguration "*" --> "1" CarModel
+CarConfiguration "*" --> "*" ComponentOption : selectedComponents\n[ComponentType]
+Car "*" --> "1" CarModel
+ComponentOption -[hidden]down- ComponentType
+AssemblyOrder -[hidden]down- AssemblyOrderStatus
+
+note right of CarConfiguration
+  every required component type is selected,
+  each option is compatible with the model;
+  total = basePrice + Σ priceDelta
+end note
+
+note bottom of AssemblyOrder
+  the warehouse's record of an order-service order:
+  what was reserved or rejected, and whether it was canceled
+end note
+
+legend right
+  All entities extend BaseEntity (UUID id, audit timestamps,
+  soft delete). OutboxEvent and ProcessedEvent are the same
+  as in order-service (outbox + idempotency).
+endlegend
+@enduml

@@ -1,0 +1,51 @@
+@startuml use-case
+!include style.iuml
+left to right direction
+skinparam linetype ortho
+skinparam nodesep 18
+skinparam ranksep 90
+
+actor "Client" as Client
+actor "Warehouse Administrator" as Warehouse
+actor "System Administrator" as Admin
+actor "Sales Manager" as Manager
+
+rectangle "Car dealership system" {
+  usecase "Book a\ntest drive" as UC_TestDrive
+  usecase "Order a car\nwith a configuration" as UC_CustomOrder
+  usecase "Order an\nin-stock car" as UC_InStockOrder
+  usecase "Manage\nspare parts" as UC_SpareParts
+  usecase "Manage\ncars" as UC_Cars
+  usecase "View car\ndetails" as UC_CarCard
+  usecase "View available\nin-stock cars" as UC_CarList
+  usecase "Filter the\ncar list" as UC_Filter
+  usecase "CRUD for\nany entity" as UC_Crud
+  usecase "View orders\n(with configuration)" as UC_CustomOrders
+  usecase "View orders\n(in stock)" as UC_InStockOrders
+  usecase "Manage the list of\ncars for test drives" as UC_TestDriveCars
+  usecase "View test-drive\nrequests" as UC_TestDriveRequests
+}
+
+Client --> UC_TestDrive
+Client --> UC_CustomOrder
+Client --> UC_InStockOrder
+Client --> UC_CarCard
+Client --> UC_CarList
+Client --> UC_Filter
+
+Warehouse --> UC_SpareParts
+Warehouse --> UC_Cars
+
+Admin --> UC_Crud
+
+Manager --> UC_CarCard
+Manager --> UC_CarList
+Manager --> UC_Filter
+Manager --> UC_CustomOrders
+Manager --> UC_InStockOrders
+Manager --> UC_TestDriveCars
+Manager --> UC_TestDriveRequests
+
+UC_CarList ..> UC_CarCard : <<include>>
+UC_CarList ..> UC_Filter : <<include>>
+@enduml

@@ -1,0 +1,47 @@
+@startuml in-stock-order-saga
+!include style.iuml
+autonumber
+
+actor Client
+participant "order-service" as OS
+database "order_db" as ODB
+queue "Kafka" as K
+participant "storage-service" as SS
+database "storage_db" as SDB
+
+Client -> OS : PATCH /api/orders/in-stock/{id}/pay
+activate OS
+OS -> ODB : status = PAID\n+ outbox: OrderSentForApprovalEvent
+note right of ODB : one local transaction
+OS --> Client : 200 {status: PAID}
+deactivate OS
+
+... outbox publisher, every few seconds ...
+OS -> ODB : select NEW events\nfor update skip locked
+OS -> K : order.sent-for-approval\n(key = orderId)
+OS -> ODB : outbox event → SENT
+
+K -> SS : OrderSentForApprovalEvent
+activate SS
+SS -> SDB : already processed? (processed_events)
+alt car is available
+  SS -> SDB : car.available = false\nassembly order ASSEMBLED
+  SS -> SDB : outbox: OrderApprovalResultEvent(APPROVED)
+else car is sold or missing
+  SS -> SDB : assembly order FAIL
+  SS -> SDB : outbox: OrderApprovalResultEvent(REJECTED, reason)
+end
+SS -> SDB : remember event id
+deactivate SS
+
+SS -> K : order.approval-result
+K -> OS : OrderApprovalResultEvent
+activate OS
+alt APPROVED
+  OS -> ODB : status = READY_FOR_DELIVERY
+else REJECTED
+  OS -> ODB : status = CANCELED
+end
+OS -> ODB : remember event id
+deactivate OS
+@enduml

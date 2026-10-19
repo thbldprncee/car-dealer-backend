@@ -1,0 +1,34 @@
+@startuml custom-order-saga
+!include style.iuml
+autonumber
+
+actor Client
+participant "order-service" as OS
+participant "storage-service" as SS
+queue "Kafka" as K
+
+Client -> SS : POST /api/configurations\n{carModelId, selected options}
+SS -> SS : check types, compatibility,\nrequired components; price it
+SS --> Client : 201 {id, totalPrice}
+
+Client -> OS : POST /api/orders/custom\n{carModelId, carConfigurationId}
+activate OS
+OS -> SS : GET /api/configurations/{id}\n(forwarding the caller's JWT)
+SS --> OS : snapshot: model, display name, total price
+OS -> OS : configuration belongs to the model?
+OS -> OS : save order CREATED\n+ outbox: OrderSentForApprovalEvent
+OS --> Client : 201 {status: CREATED}
+deactivate OS
+
+OS -> K : order.sent-for-approval
+K -> SS : OrderSentForApprovalEvent
+SS -> SS : every component option still exists?\nassembly order ASSEMBLED / FAIL
+SS -> K : order.approval-result
+K -> OS : OrderApprovalResultEvent
+alt APPROVED
+  OS -> OS : CREATED → APPROVED_BY_WAREHOUSE
+  note right of OS : the client can now be asked to pay
+else REJECTED
+  OS -> OS : CREATED → CANCELED
+end
+@enduml

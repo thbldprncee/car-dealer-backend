@@ -109,6 +109,123 @@ The warehouse's transitions are **not** REST endpoints. A manager cannot mark an
 
 ---
 
+## UML Diagrams
+
+All diagrams are [PlantUML](https://plantuml.com) sources in [`docs/uml`](docs/uml), rendered to SVG next to them; click a title to expand it. To re-render after a change:
+
+```bash
+docker run --rm -v "$PWD/docs/uml":/data -w /data plantuml/plantuml:1.2024.7 -tsvg *.puml
+```
+
+#### Requirements
+
+<details>
+<summary><b>Use cases: actors and what each of them can do</b></summary>
+<br/>
+
+![Use cases](docs/uml/use-case.svg)
+
+</details>
+
+<details>
+<summary><b>In-stock car order: states</b></summary>
+<br/>
+
+![In-stock car order states](docs/uml/in-stock-order-states.svg)
+
+</details>
+
+<details>
+<summary><b>Configured car order: states</b></summary>
+<br/>
+
+![Configured car order states](docs/uml/custom-order-states.svg)
+
+</details>
+
+
+#### Architecture
+
+<details>
+<summary><b>Services, databases, Kafka topics and Keycloak</b></summary>
+<br/>
+
+![System architecture](docs/uml/architecture.svg)
+
+</details>
+
+#### Domain model
+
+<details>
+<summary><b>order-service: orders, test drives, users, outbox</b></summary>
+<br/>
+
+![order-service domain model](docs/uml/order-service-domain.svg)
+
+</details>
+
+<details>
+<summary><b>storage-service: inventory, configurator, assembly orders</b></summary>
+<br/>
+
+![storage-service domain model](docs/uml/storage-service-domain.svg)
+
+</details>
+
+#### Interactions
+
+<details>
+<summary><b>In-stock order: payment and car reservation (saga)</b></summary>
+<br/>
+
+![In-stock order saga](docs/uml/in-stock-order-saga.svg)
+
+</details>
+
+<details>
+<summary><b>Configured car order: creation and warehouse check (saga)</b></summary>
+<br/>
+
+![Configured car order saga](docs/uml/custom-order-saga.svg)
+
+</details>
+
+<details>
+<summary><b>Order cancellation: compensation and the race with a late approval request</b></summary>
+<br/>
+
+![Order cancellation](docs/uml/order-cancellation.svg)
+
+</details>
+
+#### Lifecycles
+
+<details>
+<summary><b>Test-drive request</b></summary>
+<br/>
+
+![Test-drive request states](docs/uml/test-drive-states.svg)
+
+</details>
+
+<details>
+<summary><b>Assembly order (storage-service)</b></summary>
+<br/>
+
+![Assembly order states](docs/uml/assembly-order-states.svg)
+
+</details>
+
+<details>
+<summary><b>Outbox event</b></summary>
+<br/>
+
+![Outbox event lifecycle](docs/uml/outbox-event-states.svg)
+
+</details>
+
+---
+
 ## Security
 
 | Keycloak realm role | API role | Can do |
@@ -251,6 +368,7 @@ car-dealer-backend/
 │       ├── domain/                # cars, models, components, configurations, assembly orders
 │       ├── service/               # inventory, configurator, approval + cancellation listeners, outbox
 │       └── repository/            # Spring Data JPA + Criteria specifications
+├── docs/uml/                      # PlantUML sources + rendered SVG diagrams
 ├── docker/keycloak/               # realm export imported on start
 ├── docker-compose.yml
 └── .github/workflows/ci.yml       # build + tests, both images

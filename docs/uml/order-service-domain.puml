@@ -1,0 +1,138 @@
+@startuml order-service-domain
+!include style.iuml
+skinparam nodesep 40
+skinparam ranksep 50
+
+abstract class BaseEntity {
+  # id : UUID
+  # createdAt : Instant
+  # updatedAt : Instant
+  # removed : boolean
+  + markAsRemoved()
+  + restore()
+}
+
+abstract class User {
+  # firstName : String
+  # lastName : String
+  # email : String
+  + getFullName() : String
+}
+class Client
+class SalesManager
+class WarehouseAdmin
+class SystemAdmin
+
+class InStockCarOrder {
+  - carId : UUID
+  - carDisplayName : String
+  - status : InStockOrderStatus
+  + approveByManager()
+  + markWaitingForPayment()
+  + markAsPaid()
+  + markReadyForDeliveryAfterWarehouseApproval()
+  + cancelAfterWarehouseRejection(reason)
+  + isSentToWarehouse() : boolean
+  + complete()
+  + cancel()
+}
+
+class CustomCarOrder {
+  - carModelId : UUID
+  - carModelDisplayName : String
+  - carConfigurationId : UUID
+  - totalPrice : BigDecimal
+  - status : CustomOrderStatus
+  + approveByWarehouseAfterApprovalResult()
+  + markWaitingForPayment()
+  + markAsPaid()
+  + markWaitingForDelivery()
+  + markReadyForDelivery()
+  + cancelAfterWarehouseRejection(reason)
+  + complete()
+  + cancel()
+}
+
+class TestDriveRequest {
+  - carId : UUID
+  - carDisplayName : String
+  - startDateTime : LocalDateTime
+  - status : TestDriveStatus
+  + approve()
+  + complete()
+  + cancel()
+}
+
+class OutboxEvent {
+  - aggregateId : UUID
+  - aggregateType : String
+  - eventType : String
+  - topic : String
+  - payload : String
+  - status : OutboxEventStatus
+  - retryCount : int
+  - lastError : String
+  - traceId : String
+  - sentAt : Instant
+  + markAsSent()
+  + markPublishFailure(error, maxRetries)
+}
+
+class ProcessedEvent {
+  - eventId : UUID
+  - eventType : String
+  - traceId : String
+  - processedAt : Instant
+}
+
+enum InStockOrderStatus {
+  CREATED
+  APPROVED_BY_MANAGER
+  WAITING_FOR_PAYMENT
+  PAID
+  READY_FOR_DELIVERY
+  COMPLETED
+  CANCELED
+}
+
+enum CustomOrderStatus {
+  CREATED
+  APPROVED_BY_WAREHOUSE
+  WAITING_FOR_PAYMENT
+  PAID
+  WAITING_FOR_DELIVERY
+  READY_FOR_DELIVERY
+  COMPLETED
+  CANCELED
+}
+
+BaseEntity <|-- User
+User <|-- Client
+User <|-- SalesManager
+User <|-- WarehouseAdmin
+User <|-- SystemAdmin
+BaseEntity <|-- InStockCarOrder
+BaseEntity <|-- CustomCarOrder
+BaseEntity <|-- TestDriveRequest
+BaseEntity <|-- OutboxEvent
+
+InStockCarOrder "*" --> "1" Client : placed by
+InStockCarOrder "*" --> "1" SalesManager : handled by
+CustomCarOrder "*" --> "1" Client : placed by
+CustomCarOrder "*" --> "1" SalesManager : handled by
+TestDriveRequest "*" --> "1" Client : requested by
+
+InStockCarOrder -[hidden]down- InStockOrderStatus
+CustomCarOrder -[hidden]down- CustomOrderStatus
+
+note bottom of InStockCarOrder
+  carId, carModelId and carConfigurationId
+  reference storage-service by id only;
+  display names and price are snapshots.
+end note
+
+note bottom of ProcessedEvent
+  ids of consumed Kafka events:
+  makes the listener idempotent
+end note
+@enduml

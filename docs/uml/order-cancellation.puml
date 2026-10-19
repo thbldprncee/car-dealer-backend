@@ -1,0 +1,36 @@
+@startuml order-cancellation
+!include style.iuml
+
+actor Client
+participant "order-service" as OS
+queue "Kafka" as K
+participant "storage-service" as SS
+database "storage_db" as SDB
+
+Client -> OS : PATCH /api/orders/in-stock/{id}/cancel
+activate OS
+OS -> OS : status = CANCELED
+opt order was already sent to the warehouse (PAID / READY_FOR_DELIVERY)
+  OS -> OS : outbox: OrderCanceledEvent(orderId, carId)
+end
+OS --> Client : 200 {status: CANCELED}
+deactivate OS
+
+OS -> K : order.canceled
+K -> SS : OrderCanceledEvent
+activate SS
+alt usual case: the warehouse has already handled the order
+  SS -> SDB : find assembly order by orderId
+  opt car was reserved (ASSEMBLED, in-stock)
+    SS -> SDB : car.available = true
+  end
+  SS -> SDB : assembly order → CANCELED
+else race: the cancellation overtook the approval request
+  SS -> SDB : create assembly order in CANCELED state
+  ... later ...
+  K -> SS : OrderSentForApprovalEvent (late)
+  SS -> SDB : assembly order is CANCELED → reserve nothing
+  SS -> K : OrderApprovalResultEvent(REJECTED, "Order was canceled")
+end
+deactivate SS
+@enduml

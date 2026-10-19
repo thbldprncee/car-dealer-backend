@@ -1,0 +1,16 @@
+@startuml outbox-event-states
+!include style.iuml
+hide empty description
+left to right direction
+
+state "New" as New : saved with the business change
+state "Sent" as Sent : acknowledged by Kafka
+state "Failed" as Failed : retries exhausted,\nlastError kept
+
+[*] --> New
+New --> Sent : publish succeeded
+New --> New : publish failed\nretryCount + 1
+New --> Failed : retryCount = maxRetries
+Sent --> [*]
+Failed --> [*]
+@enduml

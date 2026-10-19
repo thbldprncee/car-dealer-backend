@@ -1,0 +1,30 @@
+@startuml custom-order-states
+!include style.iuml
+hide empty description
+skinparam linetype ortho
+left to right direction
+skinparam ranksep 40
+
+state "Created" as Created
+state "Approved by warehouse" as Approved
+state "Awaiting payment" as AwaitingPayment
+state "Paid" as Paid
+state "Awaiting car\ndelivery" as AwaitingDelivery
+state "Car ready\nfor pickup" as Ready
+state "Completed" as Completed
+state "Canceled" as Canceled
+
+[*] --> Created
+Created --> Approved
+Approved --> AwaitingPayment
+AwaitingPayment --> Paid
+Paid --> AwaitingDelivery
+AwaitingDelivery --> Ready
+Ready --> Completed
+Completed --> [*]
+
+Created -[norank]-> Canceled
+Approved -[norank]-> Canceled
+AwaitingPayment -[norank]-> Canceled
+Canceled --> [*]
+@enduml

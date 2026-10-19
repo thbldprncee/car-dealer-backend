@@ -1,0 +1,18 @@
+@startuml test-drive-states
+!include style.iuml
+hide empty description
+left to right direction
+
+state "Created" as Created
+state "Approved" as Approved
+state "Completed" as Completed
+state "Canceled" as Canceled
+
+[*] --> Created : client books
+Created --> Approved : manager approves
+Approved --> Completed : manager completes
+Completed --> [*]
+Created -[norank]-> Canceled : client or manager
+Approved -[norank]-> Canceled : client or manager
+Canceled --> [*]
+@enduml

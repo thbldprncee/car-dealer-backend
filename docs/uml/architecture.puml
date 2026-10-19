@@ -1,0 +1,42 @@
+@startuml architecture
+!include style.iuml
+skinparam nodesep 70
+skinparam ranksep 80
+
+actor "Client / staff" as User
+node "Keycloak 26\nrealm car-dealer" as Keycloak
+
+component "order-service\n:8080\n\norders · test drives\nclients · managers" as OS
+component "storage-service\n:8081 · gRPC :9090\n\ninventory · configurator\nassembly orders" as SS
+
+queue "Kafka\n\norder.sent-for-approval\norder.canceled\norder.approval-result" as Kafka
+
+database "order_db\n(PostgreSQL)" as OrderDb
+database "storage_db\n(PostgreSQL)" as StorageDb
+
+User -right-> Keycloak : 1. get access token
+User --> OS : REST + Bearer JWT
+User --> SS : REST + Bearer JWT
+
+OS -right-> SS : REST: car / configuration snapshot\ngRPC: available cars
+OS ..> Keycloak : verify JWT\n(JWKS)
+SS ..> Keycloak : verify JWT\n(JWKS)
+
+OS --> Kafka : approval requests,\ncancellations (outbox)
+Kafka --> SS
+SS --> Kafka : approval results (outbox)
+Kafka --> OS
+
+OS --> OrderDb
+SS --> StorageDb
+
+note bottom of OrderDb
+  orders, test drives, users,
+  outbox_events, processed_events
+end note
+note bottom of StorageDb
+  car models, components, configurations,
+  cars, spare parts, assembly orders,
+  outbox_events, processed_events
+end note
+@enduml

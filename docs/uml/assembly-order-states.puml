@@ -1,0 +1,18 @@
+@startuml assembly-order-states
+!include style.iuml
+hide empty description
+left to right direction
+
+state "Created" as Created
+state "Assembled" as Assembled : car reserved /\ncomponents confirmed
+state "Failed" as Failed : reason recorded
+state "Canceled" as Canceled
+
+[*] --> Created : OrderSentForApprovalEvent
+Created --> Assembled : check passed\n→ APPROVED
+Created --> Failed : check failed\n→ REJECTED
+Assembled --> Canceled : OrderCanceledEvent\n(reserved car released)
+Failed --> Canceled : OrderCanceledEvent
+[*] -[norank]-> Canceled : OrderCanceledEvent\narrived first
+Canceled --> [*]
+@enduml
