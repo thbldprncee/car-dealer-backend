@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # Build context is the repository root: the service depends on common-events and common-grpc.
 
-FROM eclipse-temurin:21-jdk AS build
+FROM --platform=$BUILDPLATFORM eclipse-temurin:21-jdk AS build
 WORKDIR /workspace
 COPY gradlew settings.gradle build.gradle ./
 COPY gradle gradle

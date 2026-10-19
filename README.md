@@ -10,6 +10,8 @@ a transactional outbox, idempotent consumers, compensating events, a gRPC invent
 <br/>
 
 [![CI](https://github.com/thbldprncee/car-dealer-backend/actions/workflows/ci.yml/badge.svg)](https://github.com/thbldprncee/car-dealer-backend/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/thbldprncee/car-dealer-backend?style=flat-square&label=release)](https://github.com/thbldprncee/car-dealer-backend/releases)
+[![Docker images](https://img.shields.io/badge/images-ghcr.io-2496ED?style=flat-square&logo=docker&logoColor=white)](https://github.com/thbldprncee?tab=packages&repo_name=car-dealer-backend)
 ![Java](https://img.shields.io/badge/Java-21-orange?style=flat-square&logo=openjdk&logoColor=white)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5-6DB33F?style=flat-square&logo=springboot&logoColor=white)
 ![Kafka](https://img.shields.io/badge/Apache%20Kafka-3.7-231F20?style=flat-square&logo=apachekafka&logoColor=white)
@@ -32,7 +34,7 @@ A dealership sells two kinds of cars. **In-stock** cars are already in the showr
 Each service has its own PostgreSQL database and never reads the other's tables. When an order needs the warehouse, for example to reserve a car once the client has paid, the services run a **saga over Kafka**. Every step is written to a **transactional outbox** first, consumers are **idempotent**, and cancellations trigger **compensating events**, so the two databases stay consistent without distributed transactions.
 
 ```bash
-docker compose up -d --build                      # 2 services, 2 databases, Kafka, Keycloak
+docker compose pull && docker compose up -d       # 2 services, 2 databases, Kafka, Keycloak
 open http://localhost:8080/swagger-ui.html        # order-service
 open http://localhost:18081/swagger-ui.html       # storage-service
 ```
@@ -273,7 +275,29 @@ service CarInventoryService {
 - Docker with Compose v2
 - JDK 21, only to run the services or tests outside Docker. The Gradle wrapper is included.
 
-### Everything in Docker
+### Run the published images (about a minute, nothing to build)
+
+Every release publishes both services to GitHub Container Registry as multi-arch images (amd64 and arm64):
+
+```bash
+git clone https://github.com/thbldprncee/car-dealer-backend.git && cd car-dealer-backend
+docker compose pull
+docker compose up -d
+```
+
+A specific release instead of `latest`:
+
+```bash
+CAR_DEALER_VERSION=1.0.0 docker compose pull
+CAR_DEALER_VERSION=1.0.0 docker compose up -d
+```
+
+| Image | |
+|-------|---|
+| `ghcr.io/thbldprncee/car-dealer-order-service` | orders, test drives, gRPC client |
+| `ghcr.io/thbldprncee/car-dealer-storage-service` | inventory, configurator, gRPC server |
+
+### Build from source
 
 ```bash
 docker compose up -d --build
@@ -304,7 +328,27 @@ docker compose up -d order-db storage-db kafka keycloak
 | `warehouse` / `warehouse` | WAREHOUSE_ADMIN | Oleg Sokolov |
 | `admin` / `admin` | all roles | Maria Ivanova |
 
-### Walk through the saga
+### Try the API: a clickable scenario
+
+[`http/car-dealer.http`](http/car-dealer.http) walks through the whole system in 21 requests, and every response is checked:
+
+1. log in as the client and the manager through Keycloak; requests without a token get 401;
+2. list available cars (order-service → gRPC → storage-service) and filter the showroom;
+3. **in-stock saga:** order → manager approval → payment → the warehouse reserves the car → cancellation → the car is back on sale;
+4. **configured car:** build a configuration, see an incompatible one rejected, order it, the warehouse confirms the components;
+5. book and approve a test drive; a client sees only their own orders.
+
+**In IntelliJ IDEA:** open the file, choose the `local` environment (`local-alt-port` if order-service runs on 18080) and press *Run All Requests in File*. Tokens and ids are passed between requests automatically.
+
+**Without an IDE**, the same file runs as a smoke test:
+
+```bash
+docker run --rm -v "$PWD/http":/workdir jetbrains/intellij-http-client \
+  -D -v http-client.env.json -e local car-dealer.http
+```
+
+<details>
+<summary>The same saga with curl</summary>
 
 ```bash
 token() { curl -s localhost:18180/realms/car-dealer/protocol/openid-connect/token \
@@ -326,6 +370,8 @@ curl -s -X PATCH localhost:8080/api/orders/in-stock/$ORDER/cancel -H "Authorizat
 sleep 5
 curl -s localhost:18081/api/cars/$CAR -H "Authorization: Bearer $USER" | jq .available                   # true again
 ```
+
+</details>
 
 ---
 
@@ -369,9 +415,12 @@ car-dealer-backend/
 │       ├── service/               # inventory, configurator, approval + cancellation listeners, outbox
 │       └── repository/            # Spring Data JPA + Criteria specifications
 ├── docs/uml/                      # PlantUML sources + rendered SVG diagrams
+├── http/                          # car-dealer.http scenario + environments (IntelliJ HTTP Client)
 ├── docker/keycloak/               # realm export imported on start
 ├── docker-compose.yml
-└── .github/workflows/ci.yml       # build + tests, both images
+└── .github/workflows/
+    ├── ci.yml                     # build + tests, both images, HTTP scenario against the full stack
+    └── release.yml                # on a v*.*.* tag: test, publish images to GHCR, GitHub release
 ```
 
 ---

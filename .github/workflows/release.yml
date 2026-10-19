@@ -1,0 +1,87 @@
+name: Release
+
+# Pushing a tag like v1.2.0 publishes both service images to GitHub Container Registry
+# as :1.2.0, :1.2 and :latest, after the full build and test suite has passed.
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  test:
+    name: Build & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew build --no-daemon
+
+  publish:
+    name: Publish ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    needs: test
+    strategy:
+      matrix:
+        service: [order-service, storage-service]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/car-dealer-${{ matrix.service }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+          labels: |
+            org.opencontainers.image.title=car-dealer-${{ matrix.service }}
+            org.opencontainers.image.description=Car Dealer Backend: ${{ matrix.service }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.service }}/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  release:
+    name: GitHub release
+    runs-on: ubuntu-latest
+    needs: publish
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create release with image coordinates
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          VERSION="${TAG#v}"
+          gh release create "$TAG" --verify-tag --generate-notes --notes "$(cat <<NOTES
+          ## Docker images
+
+          \`\`\`bash
+          CAR_DEALER_VERSION=$VERSION docker compose pull
+          CAR_DEALER_VERSION=$VERSION docker compose up -d
+          \`\`\`
+
+          - \`ghcr.io/${{ github.repository_owner }}/car-dealer-order-service:$VERSION\`
+          - \`ghcr.io/${{ github.repository_owner }}/car-dealer-storage-service:$VERSION\`
+          NOTES
+          )"

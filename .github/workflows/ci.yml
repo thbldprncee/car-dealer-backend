@@ -50,3 +50,26 @@ jobs:
           tags: car-dealer/${{ matrix.service }}:ci
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  api-scenario:
+    name: HTTP scenario on the full stack
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start PostgreSQL, Kafka, Keycloak and both services
+        run: docker compose up -d --build --wait --wait-timeout 600
+
+      - name: Run http/car-dealer.http
+        run: |
+          docker run --rm --network host -v "$PWD/http":/workdir \
+            jetbrains/intellij-http-client -v http-client.env.json -e local car-dealer.http
+
+      - name: Service logs
+        if: failure()
+        run: docker compose logs --no-color order-service storage-service | tail -300
+
+      - name: Stop the stack
+        if: always()
+        run: docker compose down -v

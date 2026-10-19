@@ -1,5 +1,7 @@
+# Published images:     docker compose pull && docker compose up -d
+# Build from source:    docker compose up -d --build
 # Infrastructure only:  docker compose up -d order-db storage-db kafka keycloak
-# Everything:           docker compose up -d --build
+# A specific release:   CAR_DEALER_VERSION=1.0.0 docker compose pull
 
 services:
   order-db:
@@ -81,6 +83,7 @@ services:
       retries: 20
 
   storage-service:
+    image: ghcr.io/thbldprncee/car-dealer-storage-service:${CAR_DEALER_VERSION:-latest}
     build:
       context: .
       dockerfile: storage-service/Dockerfile
@@ -105,6 +108,7 @@ services:
         condition: service_healthy
 
   order-service:
+    image: ghcr.io/thbldprncee/car-dealer-order-service:${CAR_DEALER_VERSION:-latest}
     build:
       context: .
       dockerfile: order-service/Dockerfile

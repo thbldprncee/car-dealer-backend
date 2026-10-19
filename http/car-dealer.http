@@ -1,0 +1,269 @@
+# Car Dealer Backend — a guided tour of the API
+#
+# Start the stack (docker compose pull && docker compose up -d), pick the "local"
+# environment in IntelliJ and press "Run all requests in file" — or run requests one by one.
+# Every request checks its response, so a green run means the whole saga works.
+#
+# Command line, no IDE needed:
+#   docker run --rm -v "$PWD/http":/workdir jetbrains/intellij-http-client \
+#     -D -v http-client.env.json -e local car-dealer.http
+
+### 1. Log in as the client (Keycloak, password grant)
+POST {{keycloakUrl}}/realms/car-dealer/protocol/openid-connect/token
+Content-Type: application/x-www-form-urlencoded
+
+client_id=car-dealer-backend&grant_type=password&username=user&password=user
+
+> {%
+    client.test("client token issued", () => client.assert(response.status === 200));
+    client.global.set("clientToken", response.body.access_token);
+%}
+
+### 2. Log in as the sales manager
+POST {{keycloakUrl}}/realms/car-dealer/protocol/openid-connect/token
+Content-Type: application/x-www-form-urlencoded
+
+client_id=car-dealer-backend&grant_type=password&username=manager&password=manager
+
+> {%
+    client.test("manager token issued", () => client.assert(response.status === 200));
+    client.global.set("managerToken", response.body.access_token);
+%}
+
+### 3. Without a token the API answers 401
+GET {{orderUrl}}/api/orders/in-stock
+
+> {%
+    client.test("401 without token", () => client.assert(response.status === 401));
+%}
+
+### 4. Available cars — order-service asks storage-service over gRPC
+GET {{orderUrl}}/api/v1/cars
+Authorization: Bearer {{clientToken}}
+
+> {%
+    client.test("cars are listed", () => {
+        client.assert(response.status === 200);
+        client.assert(response.body.length > 0, "no available cars");
+    });
+%}
+
+### 5. Filter the showroom (storage-service)
+POST {{storageUrl}}/api/cars/filter
+Authorization: Bearer {{clientToken}}
+Content-Type: application/json
+
+{
+  "brand": "BMW",
+  "maxPrice": 5000000
+}
+
+> {%
+    client.test("filter works", () => client.assert(response.status === 200));
+%}
+
+# ─── In-stock order: the approval saga ───────────────────────────────────
+
+### 6. Client orders a car from the showroom
+POST {{orderUrl}}/api/orders/in-stock
+Authorization: Bearer {{clientToken}}
+Content-Type: application/json
+
+{
+  "carId": "{{inStockCarId}}"
+}
+
+> {%
+    client.test("order created", () => {
+        client.assert(response.status === 201);
+        client.assert(response.body.status === "CREATED");
+    });
+    client.global.set("orderId", response.body.id);
+%}
+
+### 7. Manager approves the deal
+PATCH {{orderUrl}}/api/orders/in-stock/{{orderId}}/approve-by-manager
+Authorization: Bearer {{managerToken}}
+
+> {%
+    client.test("approved", () => client.assert(response.body.status === "APPROVED_BY_MANAGER"));
+%}
+
+### 8. Manager asks for payment
+PATCH {{orderUrl}}/api/orders/in-stock/{{orderId}}/waiting-for-payment
+Authorization: Bearer {{managerToken}}
+
+> {%
+    client.test("waiting for payment", () => client.assert(response.body.status === "WAITING_FOR_PAYMENT"));
+%}
+
+### 9. Client pays → the order is sent to the warehouse through the outbox and Kafka
+PATCH {{orderUrl}}/api/orders/in-stock/{{orderId}}/pay
+Authorization: Bearer {{clientToken}}
+
+> {%
+    client.test("paid", () => client.assert(response.body.status === "PAID"));
+%}
+
+### 10. A manager cannot skip the warehouse
+PATCH {{orderUrl}}/api/orders/in-stock/{{orderId}}/ready-for-delivery
+Authorization: Bearer {{managerToken}}
+
+> {%
+    client.test("no REST shortcut for warehouse decisions", () => client.assert(response.status === 404));
+%}
+
+### 11. A few seconds later the warehouse has reserved the car
+< {%
+    // The saga is asynchronous (outbox → Kafka → storage-service → outbox → Kafka); give it a moment.
+    const until = Date.now() + Number(request.environment.get("sagaWaitMs"));
+    while (Date.now() < until) { /* wait */ }
+%}
+GET {{orderUrl}}/api/orders/in-stock/{{orderId}}
+Authorization: Bearer {{clientToken}}
+
+> {%
+    client.test("warehouse approved the order", () => client.assert(response.body.status === "READY_FOR_DELIVERY"));
+%}
+
+### 12. …and the car is no longer on sale in storage-service
+GET {{storageUrl}}/api/cars/{{inStockCarId}}
+Authorization: Bearer {{clientToken}}
+
+> {%
+    client.test("car reserved", () => client.assert(response.body.available === false));
+%}
+
+### 13. Client changes their mind → compensation: OrderCanceledEvent
+PATCH {{orderUrl}}/api/orders/in-stock/{{orderId}}/cancel
+Authorization: Bearer {{clientToken}}
+
+> {%
+    client.test("canceled", () => client.assert(response.body.status === "CANCELED"));
+%}
+
+### 14. The reserved car is back on sale
+< {%
+    const until = Date.now() + Number(request.environment.get("sagaWaitMs"));
+    while (Date.now() < until) { /* wait */ }
+%}
+GET {{storageUrl}}/api/cars/{{inStockCarId}}
+Authorization: Bearer {{clientToken}}
+
+> {%
+    client.test("car released", () => client.assert(response.body.available === true));
+%}
+
+# ─── Configured car: configurator + warehouse check ──────────────────────
+
+### 15. Client configures a BMW 320i (M Sport wheels and steering wheel, leather)
+POST {{storageUrl}}/api/configurations
+Authorization: Bearer {{clientToken}}
+Content-Type: application/json
+
+{
+  "carModelId": "{{carModelId}}",
+  "selectedComponentOptionIds": {
+    "WHEELS": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2",
+    "TRANSMISSION": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3",
+    "STEERING_WHEEL": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa5",
+    "INTERIOR": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa7"
+  }
+}
+
+> {%
+    client.test("configuration priced", () => {
+        client.assert(response.status === 201);
+        client.assert(response.body.totalPrice > 0);
+    });
+    client.global.set("configurationId", response.body.id);
+%}
+
+### 16. An incompatible combination is rejected (component of the wrong type)
+POST {{storageUrl}}/api/configurations
+Authorization: Bearer {{clientToken}}
+Content-Type: application/json
+
+{
+  "carModelId": "{{carModelId}}",
+  "selectedComponentOptionIds": {
+    "WHEELS": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa7",
+    "TRANSMISSION": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3",
+    "STEERING_WHEEL": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa5",
+    "INTERIOR": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa6"
+  }
+}
+
+> {%
+    client.test("400 for a wrong component", () => client.assert(response.status === 400));
+%}
+
+### 17. Client orders the configured car → sent to the warehouse right away
+POST {{orderUrl}}/api/orders/custom
+Authorization: Bearer {{clientToken}}
+Content-Type: application/json
+
+{
+  "carModelId": "{{carModelId}}",
+  "carConfigurationId": "{{configurationId}}"
+}
+
+> {%
+    client.test("custom order created", () => {
+        client.assert(response.status === 201);
+        client.assert(response.body.status === "CREATED");
+    });
+    client.global.set("customOrderId", response.body.id);
+%}
+
+### 18. The warehouse confirmed every component
+< {%
+    const until = Date.now() + Number(request.environment.get("sagaWaitMs"));
+    while (Date.now() < until) { /* wait */ }
+%}
+GET {{orderUrl}}/api/orders/custom/{{customOrderId}}
+Authorization: Bearer {{clientToken}}
+
+> {%
+    client.test("approved by warehouse", () => client.assert(response.body.status === "APPROVED_BY_WAREHOUSE"));
+%}
+
+# ─── Test drive ─────────────────────────────────────────────────────────
+
+### 19. Client books a test drive for tomorrow
+< {%
+    const tomorrow = new Date(Date.now() + 24 * 3600 * 1000);
+    request.variables.set("tomorrow", tomorrow.toISOString().slice(0, 19));
+%}
+POST {{orderUrl}}/api/test-drives
+Authorization: Bearer {{clientToken}}
+Content-Type: application/json
+
+{
+  "carId": "{{testDriveCarId}}",
+  "startDateTime": "{{tomorrow}}"
+}
+
+> {%
+    client.test("test drive booked", () => client.assert(response.status === 201));
+    client.global.set("testDriveId", response.body.id);
+%}
+
+### 20. Manager approves it
+PATCH {{orderUrl}}/api/test-drives/{{testDriveId}}/approve
+Authorization: Bearer {{managerToken}}
+
+> {%
+    client.test("test drive approved", () => client.assert(response.body.status === "APPROVED"));
+%}
+
+### 21. Clients see only their own orders
+GET {{orderUrl}}/api/orders/in-stock
+Authorization: Bearer {{clientToken}}
+
+> {%
+    client.test("only own orders", () => {
+        client.assert(response.status === 200);
+        client.assert(response.body.every(order => order.clientId === "11111111-1111-1111-1111-111111111111"));
+    });
+%}
