@@ -101,10 +101,7 @@ run_arch() {
       PROJECT=lt-mono; READ_PATHS="direct"; SEED_TARGETS="db:car_dealer"
       log "Building the monolith from $MONOLITH_COMMIT"; build_monolith ;;
     microservices)
-      PROJECT=lt-micro; READ_PATHS="direct grpc"
-      # order_db still has a foreign key from in_stock_car_orders to its own copy of cars,
-      # so a car can only be ordered if it exists in both databases.
-      SEED_TARGETS="storage-db:storage_db order-db:order_db"
+      PROJECT=lt-micro; READ_PATHS="direct grpc"; SEED_TARGETS="storage-db:storage_db"
       log "Building the microservices"; compose build -q ;;
   esac
   NETWORK="${PROJECT}_default"

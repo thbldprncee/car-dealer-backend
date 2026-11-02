@@ -112,7 +112,7 @@ The saga now takes the same time at 80 purchases/s as at 5, so its ceiling is so
    - Below saturation, latency is the same for both (p95 ≈ 1 ms). The extra network hop costs CPU, not visible latency.
 2. **The saga's throughput is capped by the outbox, not by CPU.** `OutboxPublisher` takes at most 50 events every 3 s (`BATCH_SIZE = 50`, `fixed-delay: 3000`) and waits for Kafka's acknowledgement one event at a time. That is at most about **16 sagas/s**. The measurement agrees: at 40 purchases/s, 2,401 sagas took about 150 s, which is 16/s. Saga time grew from 4 s to 47 s at the median. Application CPU stayed at about 23% of the 400% available. Even with no load, an order waits **4–6 s** for the warehouse: two outbox hops, each waiting up to 3 s for the scheduler. The monolith finishes the same work in one transaction in under 20 ms. **Fixed:** after the change described above, the saga takes about 0.3 s up to at least 80 purchases/s.
 3. **The split costs about 2.5× the memory** (two JVMs) before Kafka is counted.
-4. **Bug found while preparing the test.** `order_db` still has a foreign key from `in_stock_car_orders` to its own copy of `cars` (`fk_in_stock_order_car`, from `001-create-tables.yaml`, never dropped in `003`). An order for any car that exists only in `storage_db` fails with HTTP 500, which means any car added through the warehouse API after the seed. The test works around it by seeding the cars into both databases.
+4. **Bug found while preparing the test.** `order_db` still has a foreign key from `in_stock_car_orders` to its own copy of `cars` (`fk_in_stock_order_car`, from `001-create-tables.yaml`, never dropped in `003`). An order for any car that exists only in `storage_db` fails with HTTP 500, which means any car added through the warehouse API after the seed. The runs above worked around it by seeding the cars into both databases. **Fixed:** `005-drop-warehouse-tables` removes this key, the same kind of keys from custom orders (to `car_models`) and test drives (to `cars`), and the copy of the warehouse tables itself. The test now seeds only `storage_db`.
 
 ## What the numbers say about the split
 
@@ -120,7 +120,6 @@ At this system's real scale, a dealership with a few orders per minute, the mono
 
 Obvious next steps, each to be measured again:
 
-- Drop the leftover foreign key in `order_db`.
 - Find the saga's new ceiling (above 80 purchases/s) and test isolation: heavy catalog reads running alongside purchases, and storage-service stopped under load.
 - Profile storage-service's REST path against the monolith's.
 
