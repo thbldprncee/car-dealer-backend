@@ -10,3 +10,6 @@ databaseChangeLog:
 
   - include:
       file: db/changelog/changeset/004-outbox-pending-index.yaml
+
+  - include:
+      file: db/changelog/changeset/005-drop-warehouse-tables.yaml

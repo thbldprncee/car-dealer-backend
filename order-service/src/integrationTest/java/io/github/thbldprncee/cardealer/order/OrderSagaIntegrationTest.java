@@ -92,6 +92,14 @@ class OrderSagaIntegrationTest {
     }
 
     @Test
+    void ordersReferToWarehouseCarsOnlyById() {
+        // A car added to the warehouse after the seed exists only in storage_db.
+        UUID orderId = paidOrder(UUID.randomUUID());
+
+        assertThat(status(orderId)).isEqualTo(InStockOrderStatus.PAID);
+    }
+
+    @Test
     void outboxEventsArePublishedToKafkaAndMarkedSent() {
         UUID aggregateId = UUID.randomUUID();
         String topic = "outbox-it-" + UUID.randomUUID();
@@ -113,11 +121,15 @@ class OrderSagaIntegrationTest {
     }
 
     private UUID paidOrder() {
+        return paidOrder(SEED_CAR_ID);
+    }
+
+    private UUID paidOrder(UUID carId) {
         InStockCarOrder order = new InStockCarOrder(
                 UUID.randomUUID(),
                 clientRepository.findByIdAndRemovedFalse(CLIENT_ID).orElseThrow(),
                 salesManagerRepository.findByIdAndRemovedFalse(MANAGER_ID).orElseThrow(),
-                SEED_CAR_ID,
+                carId,
                 "BMW 320i / VIN-IT",
                 InStockOrderStatus.PAID
         );

@@ -1,0 +1,39 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-drop-warehouse-tables
+      author: thbldprnce
+      comment: >
+        The inventory belongs to storage-service. order_db still had the monolith's copy of it, and
+        orders, custom orders and test drives had foreign keys into that copy, so a car or model added
+        to the warehouse after the seed could not be ordered or booked. Orders keep the warehouse ids
+        and a snapshot of what they refer to.
+      changes:
+        - dropForeignKeyConstraint:
+            baseTableName: in_stock_car_orders
+            constraintName: fk_in_stock_order_car
+        - dropForeignKeyConstraint:
+            baseTableName: custom_car_orders
+            constraintName: fk_custom_order_car_model
+        - dropForeignKeyConstraint:
+            baseTableName: test_drive_requests
+            constraintName: fk_test_drive_car
+        - dropTable:
+            tableName: car_configuration_selected_components
+        - dropTable:
+            tableName: car_configurations
+        - dropTable:
+            tableName: spare_part_compatible_car_models
+        - dropTable:
+            tableName: spare_parts
+        - dropTable:
+            tableName: cars
+        - dropTable:
+            tableName: car_model_base_components
+        - dropTable:
+            tableName: car_model_required_component_types
+        - dropTable:
+            tableName: component_option_compatible_car_models
+        - dropTable:
+            tableName: car_models
+        - dropTable:
+            tableName: component_options
