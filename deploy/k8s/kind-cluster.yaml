@@ -1,0 +1,15 @@
+# A local single-node cluster. The NodePorts of order-service, storage-service and Keycloak
+# are mapped to the same host ports as docker-compose's alternative ports, so the HTTP scenario
+# (environment local-alt-port) and Keycloak's issuer URL work unchanged.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: car-dealer
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30080   # order-service
+        hostPort: 18080
+      - containerPort: 30081   # storage-service
+        hostPort: 18081
+      - containerPort: 30180   # Keycloak
+        hostPort: 18180

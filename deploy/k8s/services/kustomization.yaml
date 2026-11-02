@@ -1,0 +1,13 @@
+# Step 3 of deploy.sh: the services, rolled out after the migrations have finished.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: car-dealer
+
+resources:
+  - storage-service.yaml
+  - order-service.yaml
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: car-dealer

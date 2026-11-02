@@ -319,6 +319,35 @@ docker compose up -d order-db storage-db kafka keycloak
 ./gradlew :order-service:bootRun
 ```
 
+### Kubernetes (kind)
+
+[`deploy/k8s`](deploy/k8s) deploys the same system to a local Kubernetes cluster: two replicas of each service, PostgreSQL and Kafka as StatefulSets with volumes, and Keycloak with the realm from a ConfigMap. It needs Docker, [kind](https://kind.sigs.k8s.io) and kubectl.
+
+`deploy.sh` works like a CD pipeline in three steps, each with its own kustomization:
+
+1. `infra/` deploys PostgreSQL, Kafka and Keycloak.
+2. `migrations/` runs a Liquibase Job per database.
+3. `services/` rolls out the services.
+
+```bash
+deploy/k8s/deploy.sh                 # create the cluster, build and load the images, deploy, wait until ready
+IMAGES=pull deploy/k8s/deploy.sh     # deploy the images published to GHCR instead
+deploy/k8s/deploy.sh test            # run http/car-dealer.http against the cluster
+deploy/k8s/deploy.sh rollout-check   # restart both services under load and count failed requests
+deploy/k8s/deploy.sh down            # delete the cluster
+```
+
+The services and Keycloak are exposed as NodePorts on the docker compose ports, so the HTTP scenario's `local-alt-port` environment works unchanged: order-service on `:18080`, storage-service on `:18081` and Keycloak on `:18180`.
+
+- **Zero-downtime rollouts.** Deployments use `maxUnavailable: 0`, so a new pod must pass its readiness probe before an old one is removed. A `preStop` pause gives the endpoints time to drop the old pod, and Spring Boot then shuts down gracefully. `rollout-check` keeps 100 req/s going through both services while they restart. On a local kind cluster it got 0 failed requests out of 15,000.
+- **Migrations before the rollout.** Running Liquibase inside every replica races on an empty database: two replicas create Liquibase's own tables at the same moment, and one of them crashes. In Kubernetes the services therefore start with Liquibase disabled. Hibernate's `ddl-auto=validate` still refuses a schema that doesn't match.
+  - A Job runs the Liquibase CLI first, using the same version as the services (4.31.1) and the changelog copied out of the image being deployed.
+  - The recorded changelog paths match the ones the services write themselves, so a database migrated by docker compose is recognised as up to date.
+  - If a migration fails, `deploy.sh` stops before touching the services.
+- **Probes.** The startup probe allows up to 3 minutes for the JVM. Liveness and readiness use Spring Boot's `/actuator/health/liveness` and `/readiness`. Init containers wait for the database and Kafka instead of crash-looping.
+- **Limits and isolation.** Every container has requests and a memory limit; the JVM sizes its heap from the limit (`MaxRAMPercentage=75`). The services run as UID 100 with a read-only root filesystem, no privilege escalation, all capabilities dropped and the `RuntimeDefault` seccomp profile. A PodDisruptionBudget keeps one replica of each service through node drains.
+- **Not production-ready by design.** The secrets are demo values in a manifest, Kafka and the databases run one replica each, Keycloak runs in dev mode, and NodePorts stand in for an Ingress or Gateway.
+
 ### Demo users
 
 | Username / password | Realm role | Domain user |
@@ -417,9 +446,11 @@ car-dealer-backend/
 ├── docs/uml/                      # PlantUML sources + rendered SVG diagrams
 ├── http/                          # car-dealer.http scenario + environments (IntelliJ HTTP Client)
 ├── docker/keycloak/               # realm export imported on start
+├── deploy/k8s/                    # Kubernetes manifests (kustomize), kind cluster, deploy.sh
+├── load-tests/                    # k6 load tests: monolith vs microservices, results
 ├── docker-compose.yml
 └── .github/workflows/
-    ├── ci.yml                     # build + tests, both images, HTTP scenario against the full stack
+    ├── ci.yml                     # build + tests, both images, HTTP scenario on compose and on Kubernetes
     └── release.yml                # on a v*.*.* tag: test, publish images to GHCR, GitHub release
 ```
 

@@ -1,0 +1,67 @@
+# Applies order-service's Liquibase changelog with the Liquibase CLI. The changelog is copied
+# out of the service image being deployed, so the migration always matches the code, and the
+# CLI uses the same Liquibase version as the service (4.31.1). The search path makes the
+# recorded file names identical to the ones the service itself writes when it migrates
+# (db/changelog/...), so databases migrated by docker compose and by this Job are interchangeable.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: order-db-migrate
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: order-db-migrate
+    spec:
+      restartPolicy: Never
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      initContainers:
+        - name: changelog
+          image: ghcr.io/thbldprncee/car-dealer-order-service:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - until nc -z order-db 5432; do echo waiting for order-db; sleep 2; done;
+              cp -r /app/BOOT-INF/classes/db /changelog/
+          securityContext:
+            runAsUser: 100
+            runAsGroup: 101
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - name: changelog
+              mountPath: /changelog
+      containers:
+        - name: liquibase
+          image: liquibase/liquibase:4.31.1
+          args: ["update"]
+          env:
+            - { name: LIQUIBASE_COMMAND_URL, value: "jdbc:postgresql://order-db:5432/order_db" }
+            - name: LIQUIBASE_COMMAND_USERNAME
+              valueFrom: { secretKeyRef: { name: postgres-credentials, key: username } }
+            - name: LIQUIBASE_COMMAND_PASSWORD
+              valueFrom: { secretKeyRef: { name: postgres-credentials, key: password } }
+            - { name: LIQUIBASE_COMMAND_CHANGELOG_FILE, value: "db/changelog/db.changelog-master.yaml" }
+            - { name: LIQUIBASE_SEARCH_PATH, value: "/changelog" }
+            - { name: LIQUIBASE_SHOW_BANNER, value: "false" }
+          securityContext:
+            runAsUser: 1001
+            runAsGroup: 1001
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 512Mi }
+          volumeMounts:
+            - name: changelog
+              mountPath: /changelog
+              readOnly: true
+      volumes:
+        - name: changelog
+          emptyDir: {}

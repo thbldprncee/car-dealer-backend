@@ -1,0 +1,15 @@
+# Step 2 of deploy.sh: database migrations, run once per deploy before the services roll out.
+# Running Liquibase inside every replica races on an empty database (two replicas create
+# Liquibase's own tables at the same moment), so the services start with Liquibase disabled.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: car-dealer
+
+resources:
+  - order-db-migrate.yaml
+  - storage-db-migrate.yaml
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: car-dealer
