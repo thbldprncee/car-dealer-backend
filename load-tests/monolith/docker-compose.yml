@@ -1,0 +1,46 @@
+# The monolith (commit 5baba7b) with the same resource limits as each microservice.
+# Started by load-tests/run.sh; the image is built there from `git archive 5baba7b`.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: car_dealer
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    cpus: 2
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d car_dealer"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    command: start-dev --import-realm --health-enabled=true
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HOSTNAME: http://keycloak:8080
+    volumes:
+      - ./car-dealer-realm.json:/opt/keycloak/data/import/car-dealer-realm.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q UP <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  app:
+    image: car-dealer-monolith:5baba7b
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/car_dealer
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/car-dealer
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/car-dealer/protocol/openid-connect/certs
+    cpus: 2
+    mem_limit: 1g
+    depends_on:
+      db:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy

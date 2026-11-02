@@ -1,0 +1,16 @@
+# Overlay for the root docker-compose.yml: every service and database gets the same
+# limits as the monolith and its database (2 CPUs, 1 GB).
+
+services:
+  order-db:
+    cpus: 2
+    mem_limit: 1g
+  storage-db:
+    cpus: 2
+    mem_limit: 1g
+  order-service:
+    cpus: 2
+    mem_limit: 1g
+  storage-service:
+    cpus: 2
+    mem_limit: 1g
