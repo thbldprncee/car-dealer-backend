@@ -1,0 +1,12 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-outbox-pending-index
+      author: thbldprnce
+      comment: The publisher polls for unsent events every 200 ms; a partial index keeps that query small however many events were already sent.
+      changes:
+        - sql:
+            sql: create index ix_outbox_events_pending on outbox_events (created_at) where status = 'NEW' and removed = false
+      rollback:
+        - dropIndex:
+            tableName: outbox_events
+            indexName: ix_outbox_events_pending
