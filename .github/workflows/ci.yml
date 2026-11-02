@@ -73,3 +73,31 @@ jobs:
       - name: Stop the stack
         if: always()
         run: docker compose down -v
+
+  kubernetes:
+    name: Deploy to Kubernetes (kind)
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install kind
+        run: |
+          curl -fsSLo kind https://kind.sigs.k8s.io/dl/v0.33.0/kind-linux-amd64
+          sudo install kind /usr/local/bin/kind
+
+      - name: Build the images and deploy them to a kind cluster
+        run: deploy/k8s/deploy.sh
+
+      - name: Run http/car-dealer.http against the cluster
+        run: deploy/k8s/deploy.sh test
+
+      - name: Restart both services under load, expect no failed request
+        run: deploy/k8s/deploy.sh rollout-check
+
+      - name: Cluster state and service logs
+        if: failure()
+        run: |
+          kubectl --context kind-car-dealer -n car-dealer get pods,events -o wide
+          kubectl --context kind-car-dealer -n car-dealer logs deployment/order-service --tail=200
+          kubectl --context kind-car-dealer -n car-dealer logs deployment/storage-service --tail=200
